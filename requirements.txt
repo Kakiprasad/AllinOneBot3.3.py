@@ -1,0 +1,12 @@
+cloudscraper
+requests
+pytz
+feedparser
+pyTelegramBotAPI
+beautifulsoup4
+Flask
+deep-translator
+google-genai
+apscheduler
+pymongo[srv]
+dnspython
