@@ -470,7 +470,6 @@ def send_night_pulse_report():
 # ==========================================================
 RSS_FEEDS = {
     "CNBC": "https://www.cnbctv18.com/commonfeeds/v1/cne/rss/latest.xml",
-    "Investing_Main_News": "https://news.google.com/rss/search?q=site:investing.com+intitle:(%22Fed%22+OR+%22War%22+OR+%22Crude%22+OR+%22Markets%22+OR+%22Inflation%22+OR+%22Economy%22)&hl=en-IN&gl=IN&ceid=IN:en"
 }
 
 X_RSS_FEEDS = {
@@ -1421,10 +1420,92 @@ def master_ai_summary_by_hours(message):
             parse_mode='HTML'
         )
 
+# ==========================================================
+# ⏱️ SEPARATE SINGLE-LIST NEWS COMMANDS BY SOURCE
+# ==========================================================
+
+# 1. 🐦 ET NOW (X) NEWS ONLY
+@bot.message_handler(commands=['xnews'])
+def get_x_news_list(message):
+    args = message.text.split()
+    if len(args) < 2 or not args[1].isdigit(): 
+        bot.send_message(message.chat.id, "⚠️ <b>గంటలను ఇవ్వండి సార్!</b>\nఉదాహరణ: <code>/xnews 6</code>", parse_mode='HTML')
+        return
+    fetch_filtered_news_list(message, source_type="X", hour=int(args[1]), title_label="ET NOW (X)")
+
+# 2. 🌍 NORMAL / INVESTING RSS NEWS ONLY
+@bot.message_handler(commands=['normalnews'])
+def get_normal_news_list(message):
+    args = message.text.split()
+    if len(args) < 2 or not args[1].isdigit(): 
+        bot.send_message(message.chat.id, "⚠️ <b>గంటలను ఇవ్వండి సార్!</b>\nఉదాహరణ: <code>/normalnews 6</code>", parse_mode='HTML')
+        return
+    fetch_filtered_news_list(message, source_type="NORMAL", hour=int(args[1]), title_label="Investing / Normal RSS")
+
+# 3. 🚩 REDBOX NEWS ONLY
+@bot.message_handler(commands=['redboxnews'])
+def get_redbox_news_list(message):
+    args = message.text.split()
+    if len(args) < 2 or not args[1].isdigit(): 
+        bot.send_message(message.chat.id, "⚠️ <b>గంటలను ఇవ్వండి సార్!</b>\nఉదాహరణ: <code>/redboxnews 6</code>", parse_mode='HTML')
+        return
+    fetch_filtered_news_list(message, source_type="REDBOX", hour=int(args[1]), title_label="Redbox X")
+
+# ⚙️ CORE HELPER FUNCTION (అన్నింటికీ కామన్‌గా పనిచేస్తుంది)
+def fetch_filtered_news_list(message, source_type, hour, title_label):
+    log(f"📥 Command Triggered: {message.text} for {title_label}")
+    target_time = calculate_historical_target_time(hour)
+    
+    filtered = []
+    for n in rss_news_store:
+        if isinstance(n, dict) and n.get('time') >= target_time:
+            src = n.get('source', '')
+            n_type = n.get('type', '')
+            
+            if source_type == "REDBOX" and ("Redbox" in src or "REDBOX" in src):
+                filtered.append(n)
+            elif source_type == "NORMAL" and (n_type == "NORMAL" or "Investing" in src):
+                filtered.append(n)
+            elif source_type == "X" and ("ET NOW" in src or n_type == "X"):
+                if "Redbox" not in src: # Redbox మినహాయించి కేవలం ET NOW X
+                    filtered.append(n)
+
+    filtered.sort(key=lambda x: x['time'])
+    total_count = len(filtered)
+    current_time_str = datetime.now(IST).strftime('%I:%M %p')
+
+    if not filtered:
+        bot.send_message(message.chat.id, f"⏳ గత ({hour}) గంటల్లో <b>{title_label}</b> నుండి ఏ వార్తలు రికార్డ్ అవ్వలేదు సార్.", parse_mode='HTML')
+        return
+
+    header = (
+        f"📋 <b>{title_label} లైవ్ వార్తల లిస్ట్ (గత {hour} గంటలు):</b>\n"
+        f"🕒 <b>సమయం:</b> {current_time_str}\n"
+        f"📊 <b>మొత్తం వార్తలు:</b> {total_count}\n"
+        f"──────────────────────\n\n"
+    )
+
+    list_lines = []
+    for i, n in enumerate(filtered, 1):
+        arrival_time = n['time'].astimezone(IST).strftime('%I:%M %p')
+        title = n.get('title', '')
+        line = f"<b>{i}. [{arrival_time}]:</b> {safe_html_text(title)}\n"
+        list_lines.append(line)
+
+    full_text = header + "\n".join(list_lines)
+    send_long_message(message.chat.id, full_text, parse_mode='HTML')
+
 def get_commands_list_text():
     return ("╔════════════════════════╗\n   🤖  <b>MARKET BOT COMMANDS</b>  📊\n╚════════════════════════╝\n\n"
-            "🧠 <b>AI DEEP RESEARCH SUMMARY</b>\n🔹 <code>/summary [hours]</code>\n🔹 <code>/weekly</code> (9-Section Blueprint)\n\n"
-            "⏱ <b>FETCH NEWS BY HOUR</b>\n🔸 <code>/get [hour]</code>\n🔸 <code>/getx [hour]</code>\n🔸 <code>/getred [hour]</code>\n"
+            "🧠 <b>AI DEEP RESEARCH SUMMARY</b>\n🔹 <code>/summary [hours]</code>\n🔹 <code>/weekly</code> (10/10 Institutional Blueprint)\n\n"
+            "⏱ <b>SINGLE LIST NEWS BY SOURCE</b>\n"
+            "🔸 <code>/xnews [hours]</code> (ET NOW X Only)\n"
+            "🔸 <code>/normalnews [hours]</code> (Investing RSS Only)\n"
+            "🔸 <code>/redboxnews [hours]</code> (Redbox X Only)\n"
+            "──────────────────────\n"
+            "🔸 <code>/get [hour]</code>\n"
+            "🔸 <code>/getx [hour]</code>\n"
+            "🔸 <code>/getred [hour]</code>\n"
             "──────────────────────\n📌 <i>చంటి గారు, కమాండ్ కాపీ చేయడానికి Tap చేయండి!</i>")
 
 @bot.message_handler(commands=['list'])
