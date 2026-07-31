@@ -286,7 +286,7 @@ def save_link_to_db(link):
 # 💬 TELEGRAM MESSAGE SENDING HANDLERS
 # ==========================================================
 def send_long_message(chat_id, text, parse_mode='HTML'):
-    if len(text) <= 3800:
+    if len(text) <= 3500:
         try: bot.send_message(chat_id, text, parse_mode=parse_mode, disable_web_page_preview=True)
         except Exception as e:
             log(f"⚠️ HTML Parse Error, sending plain text: {e}", "WARNING")
@@ -306,7 +306,7 @@ def send_long_message(chat_id, text, parse_mode='HTML'):
         except: bot.send_message(chat_id, clean_html_tags(current_chunk))
 
 def safe_send(msg, chat_id=CHAT_ID, parse_mode="HTML", disable_preview=True):
-    MAX_LENGTH = 4000
+    MAX_LENGTH = 3500
     parts = [msg[i:i+MAX_LENGTH] for i in range(0, len(msg), MAX_LENGTH)] if len(msg) > MAX_LENGTH else [msg]
     for part in parts:
         for i in range(3):
@@ -473,8 +473,7 @@ RSS_FEEDS = {
 }
 
 X_RSS_FEEDS = {
-    "ET NOW (X)": "https://nitter.net/ETNOWlive/rss",
-    "Redbox X": "https://nitter.net/REDBOXINDIA/rss" 
+    "ET NOW (X)": "https://nitter.net/ETNOWlive/rss", 
 }
 
 def clean_x_text(text):
