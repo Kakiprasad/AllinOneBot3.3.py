@@ -31,7 +31,7 @@ JP = pytz.timezone("Asia/Tokyo")
 HK = pytz.timezone("Asia/Hong_Kong")
 
 # ==========================================================
-# 🔍 LOGGING & CORE UTILITIES (ముందే ఉండాలి)
+# 🔍 LOGGING & CORE UTILITIES
 # ==========================================================
 def log(msg, level="INFO"):
     print(f"[{datetime.now(IST).strftime('%H:%M:%S')}] [{level}] {msg}")
@@ -59,7 +59,7 @@ try:
     
     sent_links_col = db["sent_links"]
     news_store_col = db["news_store"]
-    daily_summaries_col = db["daily_summaries"] # 🆕 Daily Summaries దాచడానికి కొత్త కలెక్షన్
+    daily_summaries_col = db["daily_summaries"]
     
     mongo_client.admin.command('ping')
     log("✅ MongoDB Connection Successful!")
@@ -72,7 +72,6 @@ if not TOKEN or not CHAT_ID:
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=4)
 MODEL_NAME = "gemini-2.5-flash" 
 
-# జెమిని క్లయింట్లు (డ్యూయల్)
 client_1 = genai.Client(api_key=GEMINI_API_KEY_1) if GEMINI_API_KEY_1 else None
 client_2 = genai.Client(api_key=GEMINI_API_KEY_2) if GEMINI_API_KEY_2 else None
 
@@ -88,14 +87,12 @@ gap_alert_sent = {}
 pinned_messages_store = []
 last_reset_date = datetime.now(IST).date()
 
-# 📦 AI Agent విశ్లేషణలు మరియు Weekly Reports కోసం ఇన్-మెమొరీ వాల్ట్
 analysis_vault = {}
 
 MAX_NEWS = 5000
 CLEAR_COUNT = 1000
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
-## 🔴 చంటి గారి 100% పక్కా మాస్టర్ వాచ్‌లిస్ట్
 MY_WATCHLIST = [
     "ANANTRAJ", "ANANT RAJ", "APOLLO", "APOLLO HOSPITALS", "BBOX", "BLACK BOX", 
     "BEL", "BHARAT ELECTRONICS", "BHARTIARTL", "BHARTI AIRTEL", "AIRTEL", 
@@ -182,27 +179,18 @@ symbols = {
 def translate_to_telugu(text):
     if not text:
         return ""
-
     try:
         translator = GoogleTranslator(source="auto", target="te")
         text = text.replace(" || ", "\n")
-        text = re.sub(
-            r'([A-Z][A-Z0-9&\-\s]+:)',
-            r'\n\1',
-            text
-        )
-
+        text = re.sub(r'([A-Z][A-Z0-9&\-\s]+:)', r'\n\1', text)
         lines = [x.strip() for x in text.split("\n") if x.strip()]
         translated = []
-
         for line in lines:
             try:
                 translated.append(translator.translate(line))
             except:
                 translated.append(line)
-
         return "\n".join(translated)
-
     except Exception:
         return text
 
@@ -217,22 +205,13 @@ def clean_html_tags(text):
     return re.sub('<[^>]+>', '', text).strip()
 
 def clean_news_title(title):
-    if not title:
-        return ""
-
-    # 1. HTML ఎంటిటీలను క్లీన్ చేయడం
+    if not title: return ""
     title = html.unescape(title)
     title = title.replace("&nbsp;", " ").replace("\xa0", " ")
-    
-    # 2. 🆕 టైటిల్ లోపల వచ్చే లింకులను మరియు HTML ట్యాగ్‌లను పూర్తిగా తీసివేయడం
     title = re.sub(r'https?://\S+|www\.\S+', '', title)
     title = clean_html_tags(title)
-    
-    # 3. 🆕 చివరన అతుక్కునే సోర్స్ పేర్లను (- Investing.com వగైరా) కట్ చేసే మాస్టర్ రెజెక్స్
     sources_pattern = r"(Investing\.com|Moneycontrol\.com|Moneycontrol|CNBC-TV18|CNBC|Economic Times|ETMarkets\.com|Business Standard|Mint|Livemint|Reuters|NDTV Profit|ET NOW)"
     title = re.sub(rf"\s*[-–|]?\s*{sources_pattern}.*$", "", title, flags=re.IGNORECASE)
-
-    # 4. చివర మిగిలిపోయిన హైఫన్‌లను తీసివేసి నీట్‌గా స్పేస్ ఇవ్వడం
     title = re.sub(r'\s*[-–|]\s*$', '', title)
     return ' '.join(title.split()).strip()
 
@@ -261,7 +240,6 @@ def is_duplicate_news(new_title):
                 if match_percentage >= 80: return True
     return False
 
-# 🆕 MongoDB నుండి పాత లింకులను లోడ్ చేసే ఫంక్షన్
 def load_sent_links_from_db():
     try:
         links = set()
@@ -274,7 +252,6 @@ def load_sent_links_from_db():
         log(f"❌ Error loading links from DB: {e}", "ERROR")
         return set()
 
-# 🆕 కొత్త లింక్‌ను MongoDB లో దాచే ఫంక్షన్
 def save_link_to_db(link):
     try:
         sent_links_col.update_one(
@@ -396,7 +373,7 @@ def is_market_open(name):
 
     mapping = {
         "Nikkei": (JP, "09:00", "15:00"), "Hang Seng": (HK, "09:30", "16:00"),
-        "KOSPI": (JP, "09:00", "15:30"), # 🆕 KOSPI Timing
+        "KOSPI": (JP, "09:00", "15:30"),
         "DAX": (EU, "09:00", "17:30"), "FTSE": (EU, "08:00", "16:30"),
         "Dow": (US, "09:30", "16:00"), "Nasdaq": (US, "09:30", "16:00"), 
         "S&P": (US, "09:30", "16:00"), "10Y": (US, "08:00", "17:00")
@@ -430,16 +407,16 @@ def check_gap_alert(name, price, prev_close, current_date):
         safe_send(f"🚨 <b>GAP ALERT!</b>\n\n{name}\n{direction}: {gap_percent:+.2f}%\nCurrent: {price:.2f} | Prev Close: {prev_close:.2f}")
         gap_alert_sent[gap_key] = True 
 
-
 # ==========================================================
-# 🔄 LIVE RSS LOOPS & FEEDS WITH "ANALYZE WITH AI" BUTTON
+# 🔄 LIVE RSS LOOPS & FEEDS
 # ==========================================================
 RSS_FEEDS = {
     "CNBC": "https://www.cnbctv18.com/commonfeeds/v1/cne/rss/latest.xml",
 }
 
 X_RSS_FEEDS = {
-    "ET NOW (X)": "https://nitter.net/ETNOWlive/rss", 
+    "ET NOW (X)": "https://nitter.net/ETNOWlive/rss",
+    "Redbox X": "https://nitter.net/REDBOXINDIA/rss", 
 }
 
 def clean_x_text(text):
@@ -458,12 +435,9 @@ def fetch_normal_rss():
             for attempt in range(3):
                 try:
                     res = requests.get(url, headers=HEADERS, timeout=25)
-                    if res.status_code != 200:
-                        continue
-                        
+                    if res.status_code != 200: continue
                     feed = feedparser.parse(res.content)
-                    if not feed.entries: 
-                        break
+                    if not feed.entries: break
 
                     for entry in feed.entries[:10]:
                         link = entry.get("link", "").strip()
@@ -518,7 +492,6 @@ def fetch_normal_rss():
                         except Exception as e: 
                             log(f"❌ Telegram error in Normal RSS: {e}", "ERROR")
                         time.sleep(1)
-                    
                     break 
 
                 except requests.exceptions.Timeout:
@@ -585,7 +558,6 @@ def fetch_x_rss():
                         else:
                             sent_msg = bot.send_message(CHAT_ID, msg, reply_markup=markup, parse_mode='HTML', disable_web_page_preview=False)
                             
-                        # 🆕 పిన్ లాజిక్: ET NOW అలర్ట్ ముఖ్యమైనదైతే పిన్ చేయడం
                         if is_important and sent_msg:
                             bot.pin_chat_message(CHAT_ID, sent_msg.message_id, disable_notification=False)
                             pinned_messages_store.append({"message_id": sent_msg.message_id, "time": datetime.now(IST)})
@@ -597,7 +569,7 @@ def fetch_x_rss():
         time.sleep(120)
 
 # ==========================================================
-# 🎛️ CALLBACK LISTENER FOR AI AGENT & WEEKLY PAGINATION BUTTONS
+# 🎛️ CALLBACK LISTENER
 # ==========================================================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_listener(call):
@@ -607,7 +579,6 @@ def callback_listener(call):
     try: bot.answer_callback_query(call.id)
     except: pass
     
-    # 1. 🧠 "Analyze with AI" బటన్ నొక్కినప్పుడు
     if msg_key.startswith("ai_analyze_"):
         if msg_key in analysis_vault:
             vault_item = analysis_vault[msg_key]
@@ -676,7 +647,6 @@ def callback_listener(call):
                     parse_mode="HTML"
                 )
 
-    # 2. 📄 పేజినేషన్ బటన్లు (Previous, Next, Pages) - లైవ్ వార్తలకు & Weekly రిపోర్ట్ కి రెండింటికీ పనిచేస్తుంది
     elif msg_key.startswith("page_"):
         parts_key = msg_key.split("_")
         unique_id = parts_key[1]
@@ -706,7 +676,6 @@ def callback_listener(call):
             
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=full_report, reply_markup=markup, parse_mode="HTML")
 
-    # 3. 🏠 'Back to Alert' బటన్
     elif msg_key.startswith("back_"):
         if msg_key in analysis_vault:
             view_key = analysis_vault[msg_key]
@@ -720,7 +689,7 @@ def callback_listener(call):
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=vault_data['original_text'], reply_markup=original_markup, parse_mode="HTML")
 
 # ==========================================================
-# 📊 GLOBAL MARKET LIVE TABLE LOGIC
+# 📊 GLOBAL MARKET LIVE TABLE
 # ==========================================================
 def send_market_table():
     log("📊 Automatically broadcasting Global Market Live Table...")
@@ -789,11 +758,7 @@ def cmd_start(message):
     log(f"📥 User {message.chat.id} triggered /start command.")
     safe_send("🚀 <b>బాట్ రెడీ చంటి గారు! అన్ని ఫిల్టర్స్ లోడ్ అయ్యాయి.</b>", chat_id=message.chat.id)
 
-# ==========================================================
-# 📊 WEEKLY CACHE & SOURCE WEIGHT CONFIGURATION
-# ==========================================================
 weekly_cache = {}
-
 
 @bot.message_handler(commands=['weekly'])
 def generate_master_weekly_report(message):
@@ -803,7 +768,6 @@ def generate_master_weekly_report(message):
     now_time = datetime.now(IST)
     current_week_key = now_time.strftime('%Y-W%U')
     
-    # 1. CACHE CHECK
     if current_week_key in weekly_cache:
         log("⚡ Serving Weekly Report from Cache!")
         cached_data = weekly_cache[current_week_key]
@@ -824,7 +788,6 @@ def generate_master_weekly_report(message):
     seven_days_ago = now_time - timedelta(days=7)
     
     try:
-        # 🆕 2. MONGODB నుండి గత 7 రోజుల DAILY SUMMARIES ని సేకరించడం
         past_summaries = list(daily_summaries_col.find({"date": {"$gte": seven_days_ago}}))
         
         if not past_summaries:
@@ -836,13 +799,11 @@ def generate_master_weekly_report(message):
             )
             return
 
-        # అన్ని రోజుల సమ్మరీలను ఒకే టెక్స్ట్‌గా కలపడం
         combined_weekly_text = ""
         for idx, doc in enumerate(past_summaries, 1):
             doc_date = doc['date'].astimezone(IST).strftime('%d-%b-%Y')
             combined_weekly_text += f"\n=== DAY {idx} SUMMARY ({doc_date}) ===\n" + doc['summary_text'] + "\n"
 
-        # 3. MASTER CIO SYNTHESIS
         master_prompt = f"""
         You are acting as the Chief Investment Officer (CIO) and Head of Macro Research for a Top Multi-Billion Dollar Institutional Fund House.
 
@@ -890,7 +851,6 @@ def generate_master_weekly_report(message):
         try: bot.delete_message(message.chat.id, waiting_msg.message_id)
         except: pass
 
-        # 4. PAGINATION & CACHE SAVE
         def split_analysis(text, size=3200):
             return [text[i:i+size] for i in range(0, len(text), size)]
 
@@ -916,7 +876,6 @@ def generate_master_weekly_report(message):
         }
         analysis_vault[back_id] = view_id
 
-        # Cache Save
         weekly_cache[current_week_key] = {
             "unique_id": unique_id,
             "short_msg": short_telegram_msg
@@ -933,8 +892,7 @@ def generate_master_weekly_report(message):
         try: bot.delete_message(message.chat.id, waiting_msg.message_id)
         except: pass
         bot.send_message(message.chat.id, f"❌ వారపు విశ్లేషణలో లోపం వచ్చింది సార్: {safe_html_text(str(e))}")
-        
-        
+
 @bot.message_handler(commands=['get', 'getred', 'getx'])
 def get_news_by_time(message):
     cmd_name = message.text.split()[0]
@@ -1077,7 +1035,6 @@ def master_ai_summary_by_hours(message):
     )
     
     aggregated_analysis_chunks = []
-    start_time = time.time()
     batch_counter = 1
     
     try:
@@ -1165,7 +1122,17 @@ def master_ai_summary_by_hours(message):
         try: bot.delete_message(message.chat.id, waiting_msg.message_id)
         except: pass
 
-        # 🆕 PAGINATION LOGIC & VAULT STORAGE (Weekly కమాండ్‌లాగే)
+        # ✅ MONGODB DATABASE SAVE (చేర్చబడిన సరియైన లాజిక్)
+        try:
+            daily_summaries_col.insert_one({
+                "date": datetime.now(IST),
+                "summary_text": final_master_summary,
+                "news_count": total_news_count
+            })
+            log("📦 Saved Today's Summary to MongoDB successfully!")
+        except Exception as db_err:
+            log(f"❌ Error saving summary to DB: {db_err}", "ERROR")
+
         def split_analysis(text, size=3200):
             return [text[i:i+size] for i in range(0, len(text), size)]
 
@@ -1209,14 +1176,7 @@ def master_ai_summary_by_hours(message):
             f"❌ సమ్మరీ లోపం (AI Error):\n{safe_html_text(str(e)[:200])}",
             parse_mode='HTML'
         )
-        # 🆕 డేటాబేస్ (MongoDB) లో సమ్మరీని భద్రపరచడం
-        daily_summaries_col.insert_one({
-            "date": datetime.now(IST),
-            "summary_text": final_master_summary,
-            "news_count": total_news_count
-        })
-        log("📦 Saved Today's Summary to MongoDB successfully!")
-        
+
 # ==========================================================
 # ⏱️ DAILY EVENING PULSE GENERATOR (8 PM - AUTO SUMMARY)
 # ==========================================================
@@ -1224,7 +1184,6 @@ def send_daily_evening_pulse_report():
     log("⏰ Automatically generating Daily Evening Market Summary Report (6 AM to 8 PM)...")
     try:
         now = datetime.now(IST)
-        # ఉదయం 06:00 AM నుండి రాత్రి 08:00 PM అంటే 14 గంటల సమయం
         cutoff_time = now - timedelta(hours=14)
         
         normal_news = [
@@ -1263,34 +1222,44 @@ def send_daily_evening_pulse_report():
         combined_raw_analysis = "\n\n".join(aggregated_analysis_chunks)
         
         master_research_prompt = f"""
-                మీరు ఒక ఇంటర్నేషనల్ రీసెర్చ్ టీమ్ హెడ్ (Elite Global Institutional Research Team Head). 
-                గత కొన్ని గంటలుగా సేకరించిన ఈ క్రింది కీలకమైన ఆర్థిక మరియు మార్కెట్ సమాచార సమూహాన్ని పూర్తిగా విశ్లేషించి, ఒక లోతైన ప్రొఫెషనల్ నివేదికను సిద్ధం చేయండి.
-                
-                DATASET TO ANALYZE:
-                {combined_raw_analysis}
-                
-                Generate a highly polished, deep institutional summary in clean, professional Telugu. 
-                Strictly structure the response into these 3 specific sections:
-        
-                1. 🚀 Stock Market & Corporate Analysis
-                   - Provide benchmark index trajectory, market sentiment, and sector-wise news (Defense, Solar/Renewable, Railways, Banking, Tech, etc.).
-                   - Clearly highlight specific stock names involved (e.g., HAL, BEL, IREDA, HDFC Bank, etc.) with actionable insights.
-        
-                2. 🇮🇳 National Business & Policy News
-                   - Detail key domestic macroeconomic developments, RBI/Government policy decisions, GST/Tax updates, and national economic indicators.
-        
-                3. 🌍 International Market & Global Trends
-                   - Outline critical international developments, US Fed decisions, inflation data, crude oil trends, foreign markets (US, Asia, Europe), and geopolitical factors.
-        
-                Formatting & Tone Instructions:
-                - Language: Professional, high-impact Telugu script.
-                - Style: Give clear, actionable market insights and highlight important stock names prominently in bold.
-                - Spacing: Use clean paragraph spacing and bullet points for effortless reading.
-                """
+            మీరు ఒక ఇంటర్నేషనల్ రీసెర్చ్ టీమ్ హెడ్ (Elite Global Institutional Research Team Head). 
+            గత కొన్ని గంటలుగా సేకరించిన ఈ క్రింది కీలకమైన ఆర్థిక మరియు మార్కెట్ సమాచార సమూహాన్ని పూర్తిగా విశ్లేషించి, ఒక లోతైన ప్రొఫెషనల్ నివేదికను సిద్ధం చేయండి.
+            
+            DATASET TO ANALYZE:
+            {combined_raw_analysis}
+            
+            Generate a highly polished, deep institutional summary in clean, professional Telugu. 
+            Strictly structure the response into these 3 specific sections:
+            
+            1. 🚀 Stock Market & Corporate Analysis
+               - Provide benchmark index trajectory, market sentiment, and sector-wise news (Defense, Solar/Renewable, Railways, Banking, Tech, etc.).
+               - Clearly highlight specific stock names involved (e.g., HAL, BEL, IREDA, HDFC Bank, etc.) with actionable insights.
+            
+            2. 🇮🇳 National Business & Policy News
+               - Detail key domestic macroeconomic developments, RBI/Government policy decisions, GST/Tax updates, and national economic indicators.
+            
+            3. 🌍 International Market & Global Trends
+               - Outline critical international developments, US Fed decisions, inflation data, crude oil trends, foreign markets (US, Asia, Europe), and geopolitical factors.
+            
+            Formatting & Tone Instructions:
+            - Language: Professional, high-impact Telugu script.
+            - Style: Give clear, actionable market insights and highlight important stock names prominently in bold.
+            - Spacing: Use clean paragraph spacing and bullet points for effortless reading.
+        """
         
         final_master_summary = safe_gemini(master_research_prompt)
         
-        # Pagination & Vault Save Logic
+        # ✅ MONGODB DATABASE SAVE FOR AUTO 8 PM SUMMARY
+        try:
+            daily_summaries_col.insert_one({
+                "date": datetime.now(IST),
+                "summary_text": final_master_summary,
+                "news_count": total_news_count
+            })
+            log("📦 Saved Evening Pulse Summary to MongoDB successfully!")
+        except Exception as db_err:
+            log(f"❌ Error saving evening summary to DB: {db_err}", "ERROR")
+
         def split_analysis(text, size=3200):
             return [text[i:i+size] for i in range(0, len(text), size)]
 
@@ -1326,13 +1295,10 @@ def send_daily_evening_pulse_report():
 
     except Exception as e:
         log(f"❌ Daily Evening Pulse Error: {e}", "ERROR")
-        
-        
-# ==========================================================
-# ⏱️ SEPARATE SINGLE-LIST NEWS COMMANDS BY SOURCE
-# ==========================================================
 
-# 1. 🐦 ET NOW (X) NEWS ONLY
+# ==========================================================
+# ⏱️ SINGLE-LIST NEWS COMMANDS BY SOURCE
+# ==========================================================
 @bot.message_handler(commands=['xnews'])
 def get_x_news_list(message):
     args = message.text.split()
@@ -1341,7 +1307,6 @@ def get_x_news_list(message):
         return
     fetch_filtered_news_list(message, source_type="X", hour=int(args[1]), title_label="ET NOW (X)")
 
-# 2. 🌍 NORMAL / INVESTING RSS NEWS ONLY
 @bot.message_handler(commands=['normalnews'])
 def get_normal_news_list(message):
     args = message.text.split()
@@ -1350,9 +1315,6 @@ def get_normal_news_list(message):
         return
     fetch_filtered_news_list(message, source_type="NORMAL", hour=int(args[1]), title_label="Investing / Normal RSS")
 
-
-
-# ⚙️ CORE HELPER FUNCTION (అన్నింటికీ కామన్‌గా పనిచేస్తుంది)
 def fetch_filtered_news_list(message, source_type, hour, title_label):
     log(f"📥 Command Triggered: {message.text} for {title_label}")
     target_time = calculate_historical_target_time(hour)
@@ -1368,7 +1330,7 @@ def fetch_filtered_news_list(message, source_type, hour, title_label):
             elif source_type == "NORMAL" and (n_type == "NORMAL" or "Investing" in src):
                 filtered.append(n)
             elif source_type == "X" and ("ET NOW" in src or n_type == "X"):
-                if "Redbox" not in src: # Redbox మినహాయించి కేవలం ET NOW X
+                if "Redbox" not in src:
                     filtered.append(n)
 
     filtered.sort(key=lambda x: x['time'])
@@ -1413,6 +1375,7 @@ def get_commands_list_text():
         "──────────────────────\n"
         "🔸 <code>/get [hour]</code> (Normal RSS Detail Flash)\n"
         "🔸 <code>/getx [hour]</code> (X RSS Detail Flash)\n"
+        "🔸 <code>/getred [hour]</code> (Redbox X RSS Detail Flash)\n"
         "──────────────────────\n"
         "⏰ <b>AUTOMATIC SCHEDULES</b>\n"
         "📌 <code>Daily 08:00 PM</code> (Auto Day Pulse & DB Save)\n"
@@ -1432,7 +1395,7 @@ def list_commands(message):
 scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
 
 scheduler.add_job(send_market_table, 'interval', minutes=10)
-scheduler.add_job(send_daily_evening_pulse_report, 'cron', hour=20, minute=0)
+scheduler.add_job(send_daily_evening_pulse_report, 'cron', hour=8, minute=45)
 scheduler.start()
 
 app = Flask('')
