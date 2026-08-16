@@ -1729,8 +1729,8 @@ def list_commands(message):
 scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
 
 scheduler.add_job(send_market_table, 'interval', minutes=10)
-scheduler.add_job(send_daily_morning_pulse_report, 'cron', hour=15, minute=0)
-scheduler.add_job(send_daily_evening_pulse_report, 'cron', hour=16, minute=0)
+scheduler.add_job(send_daily_morning_pulse_report, 'cron', hour=6, minute=0)
+scheduler.add_job(send_daily_evening_pulse_report, 'cron', hour=20, minute=0)
 scheduler.start()
 
 app = Flask('')
