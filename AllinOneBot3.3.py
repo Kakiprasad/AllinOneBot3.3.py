@@ -23,7 +23,7 @@ import pymongo
 # --- SYSTEM ENCODING ---
 sys.stdout.reconfigure(encoding='utf-8')
 
-# --- టైమ్‌ゾーン సెటప్ ---
+# --- టైమ్‌జోన్ సెటప్ ---
 IST = pytz.timezone("Asia/Kolkata")
 US = pytz.timezone("US/Eastern")
 EU = pytz.timezone("Europe/Berlin")
@@ -48,10 +48,12 @@ CHAT_ID = os.getenv("CHAT_ID")
 GEMINI_API_KEY_1 = os.getenv("GEMINI_API_KEY_1")
 GEMINI_API_KEY_2 = os.getenv("GEMINI_API_KEY_2")
 
+
 # ==========================================================
 # 🍃 MONGODB DATABASE SETUP
 # ==========================================================
 MONGO_URI = os.getenv("MONGODB_URI")
+
 
 try:
     mongo_client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
@@ -415,8 +417,7 @@ RSS_FEEDS = {
 }
 
 X_RSS_FEEDS = {
-    "ET NOW (X)": "https://nitter.net/ETNOWlive/rss",
-    "Redbox X": "https://nitter.net/REDBOXINDIA/rss", 
+    "ET NOW (X)": "https://nitter.net/ETNOWlive/rss", 
 }
 
 def clean_x_text(text):
@@ -760,6 +761,9 @@ def cmd_start(message):
 
 weekly_cache = {}
 
+# ==========================================================
+# 📊 MASTER INSTITUTIONAL WEEKLY REPORT HANDLER
+# ==========================================================
 @bot.message_handler(commands=['weekly'])
 def generate_master_weekly_report(message):
     global weekly_cache
@@ -781,14 +785,14 @@ def generate_master_weekly_report(message):
 
     waiting_msg = bot.send_message(
         message.chat.id, 
-        "⏳ చంటి గారు, గత 7 రోజుల Daily AI Summaries ని ప్రాసెస్ చేస్తున్నాను... దయచేసి వేచి ఉండండి...", 
+        "⏳ చంటి గారు, గత 7 రోజుల మార్నింగ్ & ఈవెనింగ్ (14 Pulses) AI Summaries ని స్కాన్ చేసి Institutional Intelligence Blueprint తయారు చేస్తున్నాను... దయచేసి 1-2 నిమిషాలు వేచి ఉండండి...", 
         parse_mode='HTML'
     )
     
     seven_days_ago = now_time - timedelta(days=7)
     
     try:
-        past_summaries = list(daily_summaries_col.find({"date": {"$gte": seven_days_ago}}))
+        past_summaries = list(daily_summaries_col.find({"date": {"$gte": seven_days_ago}}).sort("date", 1))
         
         if not past_summaries:
             bot.edit_message_text(
@@ -801,34 +805,509 @@ def generate_master_weekly_report(message):
 
         combined_weekly_text = ""
         for idx, doc in enumerate(past_summaries, 1):
-            doc_date = doc['date'].astimezone(IST).strftime('%d-%b-%Y')
-            combined_weekly_text += f"\n=== DAY {idx} SUMMARY ({doc_date}) ===\n" + doc['summary_text'] + "\n"
+            doc_date = doc['date'].astimezone(IST).strftime('%d-%b-%Y %I:%M %p')
+            pulse_label = doc.get('pulse_type', 'DAILY SUMMARY')
+            combined_weekly_text += f"\n=== [{idx}/{len(past_summaries)}] {pulse_label} ({doc_date}) ===\n" + doc['summary_text'] + "\n"
 
         master_prompt = f"""
-        You are acting as the Chief Investment Officer (CIO) and Head of Macro Research for a Top Multi-Billion Dollar Institutional Fund House.
+మీరు సాధారణ AI News Summarizer కాదు.
 
-        Below is the collection of Daily Market Summaries recorded over the past 7 days:
-        {combined_weekly_text}
+మీరు ఒక అత్యున్నత స్థాయి Senior Institutional Investment Analyst,
+Chief Investment Officer (CIO),
+Head of Macro Research,
+మరియు Long-Term Portfolio Strategist.
 
-        STRICT INSTITUTIONAL RULES:
-        1. Synthesize these daily summaries into a Master Weekly Institutional Blueprint in clean, high-impact Telugu.
-        2. Highlight all stock names, indices, and numerical metrics in BOLD.
-        3. Do NOT invent new facts. Use only the provided daily reports data.
+మీరు భారతీయ ఈక్విటీ మార్కెట్, Global Macro, Monetary Policy,
+Government Policy, Corporate Earnings, Sector Rotation,
+Commodities, Currency, Bond Yields, FIIs/DIIs మరియు Market Psychology
+పై దశాబ్దాల అనుభవం ఉన్న ఒక అత్యంత అనుభవజ్ఞుడైన Institutional Analyst
+లా ఆలోచించాలి.
 
-        OUTPUT FORMAT & STRUCTURE (GENERATE IN CLEAN PROFESSIONAL TELUGU):
-        📊 **INSTITUTIONAL WEEKLY MASTER BLUEPRINT**
+మీ ముందున్న సమాచారం గత 7 రోజుల Morning మరియు Evening Market
+Summaries నుండి వచ్చింది.
 
-        1. 📰 **వారంలో అత్యంత ముఖ్యమైన మార్కెట్ థీమ్‌లు (Core Market Moving Themes)**
-        2. 🏛️ **Government, SEBI & Central Bank Policy Shifts**
-        3. 🏢 **Corporate & Sectoral Dynamics** (Highlight Stock Names in BOLD)
-        4. 📈 **Global Macro & Commodities Matrix**
-        5. 🟢 **Biggest Positive Theme** vs 🔴 **Biggest Negative Theme**
-        6. 🎯 **Top 10 Institutional Signals**
-        7. 🗺️ **Risk Map & Opportunity Map**
-        8. 👁️ **Top 10 Stocks to Watch Next Week**
-        9. 🔮 **Next Week Market Path Probability**
-        10. 💡 **Investor Action Plan & Strategic Recommendations**
-        """
+ఈ డేటాను కేవలం summarize చేయకండి.
+
+దాని వెనుక ఉన్న అసలు MARKET STORY ని గుర్తించండి.
+
+--------------------------------------------------
+DATASET
+--------------------------------------------------
+
+గత 7 రోజుల Daily Market Summaries:
+
+{combined_weekly_text}
+
+--------------------------------------------------
+CORE ANALYTICAL MINDSET
+--------------------------------------------------
+
+ప్రతి ముఖ్యమైన పరిణామాన్ని ఈ క్రమంలో ఆలోచించండి:
+
+FACT
+→ WHAT CHANGED?
+→ WHY DID IT CHANGE?
+→ WHAT IS THE MARKET PRICING?
+→ WHO BENEFITS?
+→ WHO LOSES?
+→ WHICH SECTORS ARE AFFECTED?
+→ WHICH COMPANIES ARE MOST EXPOSED?
+→ HOW STRONG IS THE IMPACT?
+→ IS THE IMPACT TEMPORARY OR STRUCTURAL?
+→ WHAT COULD HAPPEN NEXT?
+→ WHAT WOULD INVALIDATE THIS VIEW?
+
+ఒక Senior Analyst లాగా headline ను repeat చేయకండి.
+
+Headline వెనుక ఉన్న second-order మరియు third-order effects ను
+గుర్తించండి.
+
+ఉదాహరణకు:
+
+Crude Oil పెరిగింది
+→ Input Cost ప్రభావం
+→ Inflation ప్రభావం
+→ RBI/Fed policy expectations
+→ Bond yields
+→ Rupee
+→ Sector margins
+→ Corporate earnings
+→ Equity valuation
+→ చివరికి market sentiment
+
+ఈ విధమైన CAUSAL CHAIN ను అవసరమైన చోట ఉపయోగించండి.
+
+--------------------------------------------------
+1. SIGNAL EXTRACTION
+--------------------------------------------------
+
+గత 7 రోజుల సమాచారంలో వచ్చిన అన్ని వార్తలను సమానంగా చూడకండి.
+
+వాటిని మూడు స్థాయిలుగా వర్గీకరించండి:
+
+A. HIGH IMPACT
+మార్కెట్, sector లేదా company earnings/valuation పై గణనీయమైన
+ప్రభావం చూపగల పరిణామాలు.
+
+B. MEDIUM IMPACT
+మార్కెట్ sentiment లేదా sector direction ను ప్రభావితం చేయగల
+కానీ తక్షణంగా పెద్ద structural change చేయని పరిణామాలు.
+
+C. LOW IMPACT / NOISE
+తాత్కాలిక headline లేదా market-moving significance తక్కువగా ఉన్న
+విషయాలు.
+
+LOW IMPACT వార్తలను report ను పొడిగించడానికి ఉపయోగించవద్దు.
+
+--------------------------------------------------
+2. WEEKLY MARKET NARRATIVE
+--------------------------------------------------
+
+మొత్తం వారాన్ని ఒకే కథగా చూడండి.
+
+ఈ ప్రశ్నలకు సమాధానం కనుగొనండి:
+
+• ఈ వారం మార్కెట్‌ను నిజంగా నడిపించిన ప్రధాన శక్తి ఏమిటి?
+• అది Macroనా?
+• Policyనా?
+• Earningsనా?
+• Liquidityనా?
+• Geopoliticsనా?
+• Commoditiesనా?
+• Foreign flowsనా?
+• Domestic institutional flowsనా?
+• Valuationనా?
+
+ఒకటి కంటే ఎక్కువ drivers ఉంటే వాటిని
+PRIMARY DRIVER మరియు SECONDARY DRIVER గా వేరు చేయండి.
+
+--------------------------------------------------
+3. FIRST-ORDER vs SECOND-ORDER IMPACT
+--------------------------------------------------
+
+ప్రతి పెద్ద సంఘటనకు:
+
+FIRST-ORDER IMPACT:
+నేరుగా ప్రభావితమయ్యే asset/sector/company.
+
+SECOND-ORDER IMPACT:
+దాని వల్ల indirect గా ప్రభావితమయ్యే sectors, companies,
+currency, bonds, commodities లేదా market sentiment.
+
+THIRD-ORDER IMPACT:
+ఇంకా downstream గా ఏర్పడే earnings, valuation,
+capital allocation లేదా investment-flow ప్రభావాలు.
+
+ఇవి dataset లో ఆధారం ఉన్నప్పుడు మాత్రమే వివరించండి.
+ఆధారం లేని విషయాలను fact లాగా చెప్పవద్దు.
+
+--------------------------------------------------
+4. SECTOR ROTATION & RELATIVE STRENGTH
+--------------------------------------------------
+
+గత వారం సమాచారాన్ని ఉపయోగించి:
+
+• ఏ sectors బలపడుతున్నాయి?
+• ఏ sectors బలహీనపడుతున్నాయి?
+• ఏ sectors కు structural tailwind కనిపిస్తోంది?
+• ఏ sectors కు temporary catalyst మాత్రమే ఉంది?
+• ఏ sectors పై cost pressure ఉంది?
+• ఏ sectors పై policy support ఉంది?
+• ఏ sectors లో earnings visibility మెరుగ్గా/బలహీనంగా కనిపిస్తోంది?
+
+సాధ్యమైనప్పుడు:
+
+WINNERS
+LOSERS
+EMERGING
+AT RISK
+
+అనే నాలుగు buckets లో sectors ను ఉంచండి.
+
+--------------------------------------------------
+5. CORPORATE & STOCK ANALYSIS
+--------------------------------------------------
+
+Dataset లో స్పష్టంగా కనిపించిన companies/stocks ను మాత్రమే
+గుర్తించండి.
+
+ప్రతి ముఖ్యమైన stock కోసం:
+
+• Catalyst ఏమిటి?
+• Risk ఏమిటి?
+• Earnings పై ప్రభావం ఎలా ఉండవచ్చు?
+• Sector trend తో ఇది align అవుతుందా?
+• ఇది company-specific storyనా లేదా sector-wide storyనా?
+• Short-term impactనా లేదా structural impactనా?
+
+ఒక stock పేరు dataset లో ఉన్నంత మాత్రాన దానిని
+BUY / SELL అని ప్రకటించవద్దు.
+
+Strong evidence ఉన్నప్పుడు మాత్రమే conviction చూపించండి.
+
+--------------------------------------------------
+6. MACRO TRANSMISSION MAP
+--------------------------------------------------
+
+ఈ క్రింది సంబంధాలను అవసరమైన చోట విశ్లేషించండి:
+
+RBI / FED
+→ Interest Rates
+→ Bond Yields
+→ Liquidity
+→ Currency
+→ Inflation
+→ Corporate Funding Cost
+→ Earnings
+→ Equity Valuation
+
+మరియు:
+
+CRUDE OIL
+→ Inflation
+→ Rupee
+→ Import Bill
+→ Margins
+→ Sector Impact
+→ Market Impact
+
+మరియు:
+
+GLOBAL MARKETS
+→ FII Sentiment
+→ Indian Equities
+→ Sector Rotation
+→ Volatility
+
+ప్రతి link ను అర్థవంతంగా వివరించండి.
+అవసరం లేని చోట mechanical explanation ఇవ్వవద్దు.
+
+--------------------------------------------------
+7. MARKET PSYCHOLOGY
+--------------------------------------------------
+
+Market కేవలం facts తో కాకుండా expectations తో కూడా కదులుతుంది.
+
+కాబట్టి dataset ఆధారంగా:
+
+• Market ఇప్పటికే ఏ విషయాన్ని price-in చేసి ఉండవచ్చు?
+• Surprise factor ఎక్కడ ఉంది?
+• Positive news ఉన్నప్పటికీ stock/market ఎందుకు weak కావచ్చు?
+• Negative news ఉన్నప్పటికీ market ఎందుకు resilient గా ఉండవచ్చు?
+
+అయితే ఇవి inference అయితే స్పష్టంగా
+"సంభావ్యంగా", "ఇది సూచించవచ్చు" వంటి భాష ఉపయోగించండి.
+
+--------------------------------------------------
+8. CONTRADICTIONS & HIDDEN SIGNALS
+--------------------------------------------------
+
+వారంలో పరస్పర విరుద్ధమైన signals ఉంటే వాటిని దాచవద్దు.
+
+ఉదాహరణ:
+
+Positive macro data
+కానీ weak market.
+
+Strong earnings
+కానీ stock underperformance.
+
+Positive policy
+కానీ sector weakness.
+
+ఇలాంటి contradictions ను ప్రత్యేకంగా గుర్తించి,
+దాని వెనుక ఉండే possible explanation ను data ఆధారంగా వివరించండి.
+
+--------------------------------------------------
+9. RISK ANALYSIS
+--------------------------------------------------
+
+కేవలం opportunities మాత్రమే చూపించవద్దు.
+
+ప్రధాన downside risks ను గుర్తించండి:
+
+• Macro Risk
+• Policy Risk
+• Geopolitical Risk
+• Commodity Risk
+• Currency Risk
+• Valuation Risk
+• Earnings Risk
+• Liquidity Risk
+• Global Market Risk
+
+ప్రతి risk కు:
+
+Probability:
+LOW / MEDIUM / HIGH
+
+Potential Impact:
+LOW / MEDIUM / HIGH
+
+అని ఇవ్వండి.
+
+Probability అనేది certainty కాదు.
+Dataset ఆధారంగా analyst judgement మాత్రమే.
+
+--------------------------------------------------
+10. OPPORTUNITY ANALYSIS
+--------------------------------------------------
+
+Dataset లో బలమైన evidence ఉన్నప్పుడు మాత్రమే:
+
+• Structural Opportunities
+• Cyclical Opportunities
+• Sector Opportunities
+• Stock-specific Opportunities
+
+గా వేరు చేయండి.
+
+ప్రతి opportunity కి:
+
+WHY?
+CATALYST?
+TIME HORIZON?
+KEY RISK?
+
+అనే నాలుగు ప్రశ్నలకు సమాధానం ఇవ్వండి.
+
+--------------------------------------------------
+11. NEXT WEEK SCENARIO ANALYSIS
+--------------------------------------------------
+
+రాబోయే వారం కోసం ఒకే prediction ఇవ్వవద్దు.
+
+మూడు scenarios నిర్మించండి:
+
+🟢 BULL CASE
+ఏ పరిణామాలు జరిగితే market/sector బలపడవచ్చు?
+
+🟡 BASE CASE
+ప్రస్తుత పరిస్థితులు కొనసాగితే సాధ్యమైన path ఏమిటి?
+
+🔴 BEAR CASE
+ఏ negative developments జరిగితే risk పెరగవచ్చు?
+
+ప్రతి scenario కు:
+
+• Trigger
+• Expected Market Behaviour
+• Sectors likely to benefit
+• Sectors likely to suffer
+• Key Risk
+
+వివరించండి.
+
+--------------------------------------------------
+12. PROBABILITY OF MARKET PATH
+--------------------------------------------------
+
+Bull / Base / Bear scenarios కు
+qualitative probability ఇవ్వండి.
+
+ఉదాహరణ:
+
+🟢 Bull Case — XX%
+🟡 Base Case — XX%
+🔴 Bear Case — XX%
+
+కానీ percentages dataset నుండి mathematical calculation చేసినవి
+కాకపోతే వాటిని "analyst-assessed probability" గా మాత్రమే చూపించండి.
+
+ఏ పరిస్థితి మారితే probability కూడా మారుతుందో చెప్పండి.
+
+--------------------------------------------------
+13. TOP INSTITUTIONAL SIGNALS
+--------------------------------------------------
+
+వారంలో కనిపించిన అత్యంత ముఖ్యమైన institutional signals ను
+priority order లో ఇవ్వండి.
+
+ప్రతి signal కోసం:
+
+SIGNAL
+WHY IT MATTERS
+MARKET IMPACT
+WHAT TO WATCH NEXT
+
+అనే structure ఉపయోగించండి.
+
+సాధారణ వార్తలను institutional signal గా మార్చవద్దు.
+
+--------------------------------------------------
+14. TOP STOCKS TO WATCH
+--------------------------------------------------
+
+గత వారం data ఆధారంగా వచ్చే వారం అత్యంత పరిశీలించాల్సిన
+Top 10 stocks ను మాత్రమే ఎంపిక చేయండి.
+
+ప్రతి stock కు:
+
+• Stock
+• Sector
+• Key Catalyst
+• Key Risk
+• What to Monitor Next Week
+• Conviction: LOW / MEDIUM / HIGH
+
+ఇవ్వండి.
+
+ఇది BUY recommendation కాదు.
+
+--------------------------------------------------
+15. INVESTOR DECISION FRAMEWORK
+--------------------------------------------------
+
+చివరగా ఒక disciplined investor ఏమి గమనించాలి
+అనే విధంగా చెప్పండి.
+
+ఈ మూడు categories ఉపయోగించండి:
+
+🟢 WHAT TO WATCH
+🟡 WHAT TO WAIT FOR
+🔴 WHAT TO AVOID / BE CAUTIOUS ABOUT
+
+Blind buying, selling లేదా guaranteed returns వంటి
+భాషను ఉపయోగించవద్దు.
+
+--------------------------------------------------
+STRICT FACT & EVIDENCE RULES
+--------------------------------------------------
+
+1. PROVIDED DATASET ఈ report కి primary source.
+
+2. Dataset లో లేని facts, prices, percentages, earnings figures,
+FII/DII numbers, valuations లేదా dates ను సృష్టించవద్దు.
+
+3. ఏదైనా విషయం dataset లో లేకపోతే:
+"ఈ డేటాలో దీనికి తగిన సమాచారం లేదు"
+అని స్పష్టంగా చెప్పండి.
+
+4. FACT, INFERENCE మరియు ANALYST VIEW ను కలపవద్దు.
+
+5. Fact:
+Dataset లో ఉన్న సమాచారం.
+
+6. Inference:
+Dataset ఆధారంగా reasonable interpretation.
+
+7. Analyst View:
+అందుబాటులో ఉన్న signals ఆధారంగా forward-looking judgement.
+
+8. Certainty లేని విషయాలను certainty గా చెప్పవద్దు.
+
+9. గతంలో జరిగిన విషయాన్ని future certainty గా మార్చవద్దు.
+
+10. ప్రతి ముఖ్యమైన conclusion కి దాని reasoning కనిపించేలా చేయండి.
+
+11. Repetition తగ్గించండి.
+
+12. ఒకే news ను వివిధ sections లో మళ్లీ మళ్లీ రాయకండి.
+
+13. Noise కంటే signal కు priority ఇవ్వండి.
+
+14. Stock names, indices మరియు ముఖ్యమైన numerical metrics ను
+**BOLD** చేయండి.
+
+--------------------------------------------------
+FINAL OUTPUT
+--------------------------------------------------
+
+శుభ్రమైన, అత్యున్నత స్థాయి Professional Telugu లో report ఇవ్వండి.
+
+భాష:
+
+• Senior Analyst లాగా
+• Institutional Research Report లాగా
+• స్పష్టంగా
+• లోతుగా
+• Evidence-based గా
+• Decision-oriented గా
+• కానీ sensational గా కాకుండా
+
+OUTPUT STRUCTURE:
+
+📊 INSTITUTIONAL WEEKLY MARKET INTELLIGENCE REPORT
+
+1. 🧭 Executive Investment View
+2. 📰 Core Market-Moving Themes
+3. 🏛️ Government / RBI / SEBI / Policy
+4. 🌍 Global Macro & Geopolitical Landscape
+5. 🛢️ Commodities / Currency / Bond Signals
+6. 🏢 Corporate & Sector Intelligence
+7. 🔄 Sector Rotation & Relative Strength
+8. 🧠 Market Psychology & Hidden Signals
+9. ⚠️ Contradictions & Risk Signals
+10. 🟢 Opportunities
+11. 🎯 Top 10 Institutional Signals
+12. 👁️ Top 10 Stocks to Watch Next Week
+13. 🔮 Bull / Base / Bear Scenarios
+14. 📊 Next Week Market Path — Analyst Probability
+15. 💡 Investor Decision Framework
+16. 🧾 Final CIO Takeaway
+
+చివర్లో 5–8 lines లో:
+
+"ఈ వారం మార్కెట్ యొక్క అసలు కథ ఏమిటి,
+వచ్చే వారం ఏ విషయాలు నిర్ణయాత్మకంగా మారవచ్చు,
+మరియు ఒక disciplined investor ఏ signals ను తప్పకుండా
+గమనించాలి"
+
+అనే FINAL CIO TAKEAWAY ఇవ్వండి.
+
+ముఖ్యంగా:
+
+NEWS ను REPORT చేయడం మీ పని కాదు.
+
+NEWS మధ్య ఉన్న RELATIONSHIPS ను గుర్తించడం,
+MARKET కి ఏది నిజంగా ముఖ్యమో నిర్ణయించడం,
+CAUSE → IMPACT → SECOND-ORDER EFFECT → RISK → OPPORTUNITY
+గా ఆలోచించడం మీ ప్రధాన బాధ్యత.
+
+మీ output ఒక సాధారణ weekly summary లాగా కాకుండా,
+ఒక Senior Institutional Analyst తన Investment Committee కి
+వారాంతంలో ఇచ్చే professional research briefing లాగా ఉండాలి.
+"""
 
         active_client = client_2 or client_1
         report_text = None
@@ -861,15 +1340,16 @@ def generate_master_weekly_report(message):
         back_id = f"back_{unique_id}"
 
         short_telegram_msg = (
-            f"📊 INSTITUTIONAL WEEKLY MASTER BLUEPRINT\n"
-            f"🏢 విశ్లేషణ: గత 7 రోజుల Daily Summaries ఆధారంగా రూపొందించిన నివేదిక\n"
+            f"📊 <b>INSTITUTIONAL WEEKLY MARKET INTELLIGENCE</b>\n"
+            f"🏢 విశ్లేషణ: CIO & Macro Research Desk\n"
+            f"📑 డేటా: గత 7 రోజుల ({len(past_summaries)} Pulses) సమగ్ర రీసెర్చ్ నివేదిక\n"
             f"──────────────────────\n"
-            f"💡 సమగ్ర వారపు నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
+            f"💡 పూర్తి 16 విభాగాల ఇన్స్టిట్యూషనల్ నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
         )
 
         analysis_vault[view_id] = {
-            "title": "WEEKLY MASTER BLUEPRINT",
-            "source": "Institutional Research Desk",
+            "title": "INSTITUTIONAL WEEKLY MARKET INTELLIGENCE REPORT",
+            "source": "CIO Investment Committee",
             "parts": report_parts,
             "original_text": short_telegram_msg,
             "back_key": back_id
@@ -998,102 +1478,53 @@ def get_news_by_time(message):
     )
     bot.send_message(message.chat.id, final_end_msg, parse_mode='HTML')
 
-@bot.message_handler(commands=['summary'])
-def master_ai_summary_by_hours(message):
-    log(f"📥 Command Received: User {message.chat.id} triggered '{message.text}'")
-    args = message.text.split()
-    hour = int(args[1]) if len(args) > 1 and args[1].isdigit() else 6
-    
-    target_time = calculate_historical_target_time(hour)
+# ==========================================================
+# 🧠 REUSABLE AI SUMMARY GENERATOR PIPELINE
+# ==========================================================
+def process_ai_summary(hours, pulse_title, pulse_type, chat_id=None):
+    now = datetime.now(IST)
+    cutoff_time = now - timedelta(hours=hours)
     
     normal_news = [
         n for n in rss_news_store 
         if isinstance(n, dict) 
-        and n.get('time') >= target_time 
+        and n.get('time') >= cutoff_time 
         and n.get('type') == "NORMAL"
     ]
     total_news_count = len(normal_news)
     
+    target_chat = chat_id or CHAT_ID
+    
     if not normal_news:
-        bot.send_message(message.chat.id, f"⏳ చంటి గారు, గత ({hour}) గంటల్లో Normal RSS ఫీడ్‌లో ఏ వార్తలు రికార్డ్ అవ్వలేదు సార్.", parse_mode='HTML')
+        no_news_msg = f"⚡ 🎯 <b>{pulse_title}</b> ⚡\n📌 అప్‌డేట్: గత {hours} గంటల్లో విశ్లేషణకు తగిన వార్తలు ఏవీ నమోదు కాలేదు సార్."
+        bot.send_message(target_chat, no_news_msg, parse_mode='HTML')
         return
 
     batch_size = 20
-    total_batches = (total_news_count + batch_size - 1) // batch_size
-    
-    estimated_seconds = (total_batches - 1) * 20 
-    minutes, seconds = divmod(estimated_seconds, 60)
-    time_display = f"{minutes} నిమిషాల {seconds} సెకన్లు" if minutes > 0 else f"{seconds} సెకన్లు"
-
-    waiting_msg = bot.send_message(
-        message.chat.id, 
-        f"⏳ చంటి గారు, గత {hour} గంటల ET NOW & NDTV Profit వార్తల సమాచారాన్ని సేకరిస్తున్నాను...\n\n"
-        f"📊 మొత్తం వార్తలు: {total_news_count} ({total_batches} బ్యాచ్‌లు)\n"
-        f"⏰ పట్టే అంచనా సమయం: ~{time_display}\n\n"
-        f"⚠️ జెమిని ఏఐ స్కాన్ చేస్తోంది సార్. దయచేసి ఓపిక పట్టండి...", 
-        parse_mode='HTML'
-    )
-    
     aggregated_analysis_chunks = []
-    batch_counter = 1
-    
-    try:
-        for idx in range(0, total_news_count, batch_size):
-            batch = normal_news[idx : idx + batch_size]
-            batch_text = "\n".join([f"- {n['title']}" for n in batch])
-            
-            chunk_prompt = f"""
-            You are acting as the Head of an Elite International Research Team. Review this batch of market live updates:
-            {batch_text}
-            
-            Extract and summarize all critical technical insights, corporate declarations, national developments, and macro global changes. 
-            Keep the layout compact and concise for synthesis.
-            """
-            
-            chunk_analysis = safe_gemini(chunk_prompt)
-            
-            if "AI అందుబాటులో లేదు" in chunk_analysis or "Key Error" in chunk_analysis:
-                raise Exception("Gemini API responding with errors or Rate Limits.")
-                
-            aggregated_analysis_chunks.append(chunk_analysis)
-            
-            if idx + batch_size < total_news_count:
-                remaining_batches = total_batches - batch_counter
-                rem_seconds = remaining_batches * 20
-                rem_min, rem_sec = divmod(rem_seconds, 60)
-                rem_display = f"{rem_min}m {rem_sec}s" if rem_min > 0 else f"{rem_sec}s"
-                
-                try:
-                    bot.edit_message_text(
-                        chat_id=message.chat.id,
-                        message_id=waiting_msg.message_id,
-                        text=f"⏳ జెమిని ద్వారా బల్క్ బ్యాచ్ ప్రాసెసింగ్ జరుగుతోంది సార్...\n\n"
-                             f"🔄 పూర్తయిన బ్యాచ్‌లు: {batch_counter}/{total_batches}\n"
-                             f"⏳ మిగిలిన సమయం: ~{rem_display}\n\n"
-                             f"📊 స్కాన్ అవుతున్న వార్తలు: {idx + batch_size} వరకు విజయవంతంగా పూర్తయింది.",
-                        parse_mode='HTML'
-                    )
-                except:
-                    pass
-                    
-                time.sleep(20) 
-            batch_counter += 1
-        
-        try:
-            bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=waiting_msg.message_id,
-                text="📝 అన్ని బ్యాచ్‌ల సేకరణ పూర్తయింది చంటి గారు! రీసెర్చ్ టీమ్ హెడ్ ఫైనల్ మాస్టర్ రిపోర్ట్ తయారు చేస్తున్నారు... ఒకే ఒక్క నిమిషం సార్.",
-                parse_mode='HTML'
-            )
-        except:
-            pass
 
-        combined_raw_analysis = "\n\n".join(aggregated_analysis_chunks)
+    for idx in range(0, total_news_count, batch_size):
+        batch = normal_news[idx : idx + batch_size]
+        batch_text = "\n".join([f"- {n['title']}" for n in batch])
         
-        master_research_prompt = f"""
+        chunk_prompt = f"""
+        You are acting as the Head of an Elite International Research Team. Review this batch of market live updates:
+        {batch_text}
+        
+        Extract and summarize all critical technical insights, corporate declarations, national developments, and macro global changes. 
+        Keep the layout compact and concise for synthesis.
+        """
+        
+        chunk_analysis = safe_gemini(chunk_prompt)
+        if chunk_analysis and "AI అందుబాటులో లేదు" not in chunk_analysis:
+            aggregated_analysis_chunks.append(chunk_analysis)
+        time.sleep(3)
+
+    combined_raw_analysis = "\n\n".join(aggregated_analysis_chunks)
+    
+    master_research_prompt = f"""
         మీరు ఒక ఇంటర్నేషనల్ రీసెర్చ్ టీమ్ హెడ్ (Elite Global Institutional Research Team Head). 
-        గత కొన్ని గంటలుగా సేకరించిన ఈ క్రింది కీలకమైన ఆర్థిక మరియు మార్కెట్ సమాచార సమూహాన్ని పూర్తిగా విశ్లేషించి, ఒక లోతైన ప్రొఫెషనల్ నివేదికను సిద్ధం చేయండి.
+        గత {hours} గంటలుగా ({pulse_title}) సేకరించిన ఈ క్రింది కీలకమైన ఆర్థిక మరియు మార్కెట్ సమాచార సమూహాన్ని పూర్తిగా విశ్లేషించి, ఒక లోతైన ప్రొఫెషనల్ నివేదికను సిద్ధం చేయండి.
         
         DATASET TO ANALYZE:
         {combined_raw_analysis}
@@ -1115,186 +1546,87 @@ def master_ai_summary_by_hours(message):
         - Language: Professional, high-impact Telugu script.
         - Style: Give clear, actionable market insights and highlight important stock names prominently in bold.
         - Spacing: Use clean paragraph spacing and bullet points for effortless reading.
-        """
-        
-        final_master_summary = safe_gemini(master_research_prompt)
-        
-        try: bot.delete_message(message.chat.id, waiting_msg.message_id)
-        except: pass
+    """
+    
+    final_master_summary = safe_gemini(master_research_prompt)
+    
+    # 🍃 MONGODB DATABASE SAVE (Morning / Evening Pulse)
+    try:
+        daily_summaries_col.insert_one({
+            "date": datetime.now(IST),
+            "pulse_type": pulse_type,
+            "summary_text": final_master_summary,
+            "news_count": total_news_count
+        })
+        log(f"📦 Saved {pulse_type} to MongoDB successfully!")
+    except Exception as db_err:
+        log(f"❌ Error saving summary to DB: {db_err}", "ERROR")
 
-        # ✅ MONGODB DATABASE SAVE (చేర్చబడిన సరియైన లాజిక్)
-        try:
-            daily_summaries_col.insert_one({
-                "date": datetime.now(IST),
-                "summary_text": final_master_summary,
-                "news_count": total_news_count
-            })
-            log("📦 Saved Today's Summary to MongoDB successfully!")
-        except Exception as db_err:
-            log(f"❌ Error saving summary to DB: {db_err}", "ERROR")
+    def split_analysis(text, size=3200):
+        return [text[i:i+size] for i in range(0, len(text), size)]
 
-        def split_analysis(text, size=3200):
-            return [text[i:i+size] for i in range(0, len(text), size)]
+    report_parts = split_analysis(final_master_summary)
+    unique_id = int(time.time() * 1000)
 
-        report_parts = split_analysis(final_master_summary)
-        unique_id = int(time.time() * 1000)
+    view_id = f"view_{unique_id}"
+    back_id = f"back_{unique_id}"
 
-        view_id = f"view_{unique_id}"
-        back_id = f"back_{unique_id}"
+    short_telegram_msg = (
+        f"💥 <b>{pulse_title}</b> 💥\n"
+        f"🏢 నివేదిక: గత {hours} గంటల మార్కెట్ సమాచార సమగ్ర విశ్లేషణ\n"
+        f"📊 మొత్తం స్కాన్ చేసిన వార్తలు: {total_news_count}\n"
+        f"──────────────────────\n"
+        f"💡 సమగ్ర నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
+    )
 
-        current_time_str = datetime.now(IST).strftime('%I:%M %p')
-        short_telegram_msg = (
-            f"💥 GLOBAL RESEARCH TEAM MASTER PULSE 💥\n"
-            f"🏢 నివేదిక: రీసెర్చ్ టీమ్ హెడ్ అనాలసిస్\n"
-            f"🕒 విశ్లేషణ సమయం: గత {hour} గంటల డేటా ({current_time_str})\n"
-            f"📊 మొత్తం స్కాన్ చేసిన వార్తలు: {total_news_count}\n"
-            f"──────────────────────\n"
-            f"💡 సమగ్ర నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
-        )
+    analysis_vault[view_id] = {
+        "title": f"{pulse_type} ({total_news_count} News Items)",
+        "source": "Global Research Desk",
+        "parts": report_parts,
+        "original_text": short_telegram_msg,
+        "back_key": back_id
+    }
+    analysis_vault[back_id] = view_id
 
-        analysis_vault[view_id] = {
-            "title": f"MASTER RESEARCH PULSE ({total_news_count} News Items)",
-            "source": "Global Research Desk",
-            "parts": report_parts,
-            "original_text": short_telegram_msg,
-            "back_key": back_id
-        }
-        analysis_vault[back_id] = view_id
+    markup = InlineKeyboardMarkup()
+    view_btn = InlineKeyboardButton(text="🔎 పూర్తి విశ్లేషణ చదవండి (Read Full View)", callback_data=f"page_{unique_id}_0")
+    markup.add(view_btn)
 
-        markup = InlineKeyboardMarkup()
-        view_btn = InlineKeyboardButton(text="🔎 పూర్తి విశ్లేషణ చదవండి (Read Full View)", callback_data=f"page_{unique_id}_0")
-        markup.add(view_btn)
+    bot.send_message(target_chat, short_telegram_msg, reply_markup=markup, parse_mode="HTML")
 
-        bot.send_message(message.chat.id, short_telegram_msg, reply_markup=markup, parse_mode="HTML")
-
+# ==========================================================
+# ⏱️ SCHEDULED PULSE FUNCTIONS (MORNING 6 AM & EVENING 8 PM)
+# ==========================================================
+def send_daily_morning_pulse_report():
+    log("⏰ Automatically generating Daily Morning Market Summary Report (8 PM to 6 AM)...")
+    try:
+        process_ai_summary(hours=10, pulse_title="DAILY MORNING MARKET PULSE (06:00 AM)", pulse_type="MORNING PULSE")
     except Exception as e:
-        log(f"❌ Master Summary Logic Error: {e}", "ERROR")
-        try: bot.delete_message(message.chat.id, waiting_msg.message_id)
-        except: pass
-        bot.send_message(
-            message.chat.id,
-            f"❌ సమ్మరీ లోపం (AI Error):\n{safe_html_text(str(e)[:200])}",
-            parse_mode='HTML'
-        )
+        log(f"❌ Daily Morning Pulse Error: {e}", "ERROR")
 
-# ==========================================================
-# ⏱️ DAILY EVENING PULSE GENERATOR (8 PM - AUTO SUMMARY)
-# ==========================================================
 def send_daily_evening_pulse_report():
     log("⏰ Automatically generating Daily Evening Market Summary Report (6 AM to 8 PM)...")
     try:
-        now = datetime.now(IST)
-        cutoff_time = now - timedelta(hours=14)
-        
-        normal_news = [
-            n for n in rss_news_store 
-            if isinstance(n, dict) 
-            and n.get('time') >= cutoff_time 
-            and n.get('type') == "NORMAL"
-        ]
-        total_news_count = len(normal_news)
-        
-        if not normal_news:
-            no_news_msg = "⚡ 🎯 DAILY EVENING MARKET PULSE (08:00 PM) ⚡\n📌 అప్‌డేట్: ఈరోజు ఉదయం 6:00 AM నుండి రాత్రి 8:00 PM వరకు విశ్లేషణకు తగిన వార్తలు ఏవీ నమోదు కాలేదు సార్."
-            bot.send_message(CHAT_ID, no_news_msg, parse_mode='HTML')
-            return
-
-        batch_size = 20
-        aggregated_analysis_chunks = []
-
-        for idx in range(0, total_news_count, batch_size):
-            batch = normal_news[idx : idx + batch_size]
-            batch_text = "\n".join([f"- {n['title']}" for n in batch])
-            
-            chunk_prompt = f"""
-            You are acting as the Head of an Elite International Research Team. Review this batch of market live updates:
-            {batch_text}
-            
-            Extract and summarize all critical technical insights, corporate declarations, national developments, and macro global changes. 
-            Keep the layout compact and concise for synthesis.
-            """
-            
-            chunk_analysis = safe_gemini(chunk_prompt)
-            if chunk_analysis and "AI అందుబాటులో లేదు" not in chunk_analysis:
-                aggregated_analysis_chunks.append(chunk_analysis)
-            time.sleep(5)
-
-        combined_raw_analysis = "\n\n".join(aggregated_analysis_chunks)
-        
-        master_research_prompt = f"""
-            మీరు ఒక ఇంటర్నేషనల్ రీసెర్చ్ టీమ్ హెడ్ (Elite Global Institutional Research Team Head). 
-            గత కొన్ని గంటలుగా సేకరించిన ఈ క్రింది కీలకమైన ఆర్థిక మరియు మార్కెట్ సమాచార సమూహాన్ని పూర్తిగా విశ్లేషించి, ఒక లోతైన ప్రొఫెషనల్ నివేదికను సిద్ధం చేయండి.
-            
-            DATASET TO ANALYZE:
-            {combined_raw_analysis}
-            
-            Generate a highly polished, deep institutional summary in clean, professional Telugu. 
-            Strictly structure the response into these 3 specific sections:
-            
-            1. 🚀 Stock Market & Corporate Analysis
-               - Provide benchmark index trajectory, market sentiment, and sector-wise news (Defense, Solar/Renewable, Railways, Banking, Tech, etc.).
-               - Clearly highlight specific stock names involved (e.g., HAL, BEL, IREDA, HDFC Bank, etc.) with actionable insights.
-            
-            2. 🇮🇳 National Business & Policy News
-               - Detail key domestic macroeconomic developments, RBI/Government policy decisions, GST/Tax updates, and national economic indicators.
-            
-            3. 🌍 International Market & Global Trends
-               - Outline critical international developments, US Fed decisions, inflation data, crude oil trends, foreign markets (US, Asia, Europe), and geopolitical factors.
-            
-            Formatting & Tone Instructions:
-            - Language: Professional, high-impact Telugu script.
-            - Style: Give clear, actionable market insights and highlight important stock names prominently in bold.
-            - Spacing: Use clean paragraph spacing and bullet points for effortless reading.
-        """
-        
-        final_master_summary = safe_gemini(master_research_prompt)
-        
-        # ✅ MONGODB DATABASE SAVE FOR AUTO 8 PM SUMMARY
-        try:
-            daily_summaries_col.insert_one({
-                "date": datetime.now(IST),
-                "summary_text": final_master_summary,
-                "news_count": total_news_count
-            })
-            log("📦 Saved Evening Pulse Summary to MongoDB successfully!")
-        except Exception as db_err:
-            log(f"❌ Error saving evening summary to DB: {db_err}", "ERROR")
-
-        def split_analysis(text, size=3200):
-            return [text[i:i+size] for i in range(0, len(text), size)]
-
-        report_parts = split_analysis(final_master_summary)
-        unique_id = int(time.time() * 1000)
-
-        view_id = f"view_{unique_id}"
-        back_id = f"back_{unique_id}"
-
-        short_telegram_msg = (
-            f"💥 DAILY EVENING MARKET PULSE (08:00 PM) 💥\n"
-            f"🏢 నివేదిక: ఈరోజు ఉదయం 6:00 AM నుండి రాత్రి 8:00 PM వరకు వచ్చిన కీలకమైన వార్తల సమగ్ర విశ్లేషణ\n"
-            f"📊 మొత్తం స్కాన్ చేసిన వార్తలు: {total_news_count}\n"
-            f"──────────────────────\n"
-            f"💡 సమగ్ర నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
-        )
-
-        analysis_vault[view_id] = {
-            "title": f"DAILY EVENING PULSE ({total_news_count} News Items)",
-            "source": "Global Research Desk",
-            "parts": report_parts,
-            "original_text": short_telegram_msg,
-            "back_key": back_id
-        }
-        analysis_vault[back_id] = view_id
-
-        markup = InlineKeyboardMarkup()
-        view_btn = InlineKeyboardButton(text="🔎 పూర్తి విశ్లేషణ చదవండి (Read Full View)", callback_data=f"page_{unique_id}_0")
-        markup.add(view_btn)
-
-        bot.send_message(CHAT_ID, short_telegram_msg, reply_markup=markup, parse_mode="HTML")
-        log("📌 Daily Evening Pulse Summary Sent Successfully.")
-
+        process_ai_summary(hours=14, pulse_title="DAILY EVENING MARKET PULSE (08:00 PM)", pulse_type="EVENING PULSE")
     except Exception as e:
         log(f"❌ Daily Evening Pulse Error: {e}", "ERROR")
+
+# ==========================================================
+# 🤖 ON-DEMAND MORNING & SUMMARY COMMANDS
+# ==========================================================
+@bot.message_handler(commands=['morning'])
+def cmd_morning_summary(message):
+    log(f"📥 User {message.chat.id} triggered /morning command.")
+    bot.send_message(message.chat.id, "⏳ <b>చంటి గారు, నిన్న రాత్రి 8 PM నుండి ఈరోజు ఉదయం 6 AM వరకు వచ్చిన ఓవర్‌నైట్ వార్తలను విశ్లేషిస్తున్నాను...</b>", parse_mode='HTML')
+    process_ai_summary(hours=10, pulse_title="MORNING OVERNIGHT PULSE", pulse_type="MORNING PULSE", chat_id=message.chat.id)
+
+@bot.message_handler(commands=['summary'])
+def master_ai_summary_by_hours(message):
+    log(f"📥 Command Received: User {message.chat.id} triggered '{message.text}'")
+    args = message.text.split()
+    hour = int(args[1]) if len(args) > 1 and args[1].isdigit() else 6
+    bot.send_message(message.chat.id, f"⏳ <b>చంటి గారు, గత {hour} గంటల మార్కెట్ వార్తలను విశ్లేషిస్తున్నాను...</b>", parse_mode='HTML')
+    process_ai_summary(hours=hour, pulse_title=f"CUSTOM MARKET SUMMARY (Past {hour} Hours)", pulse_type="CUSTOM SUMMARY", chat_id=message.chat.id)
 
 # ==========================================================
 # ⏱️ SINGLE-LIST NEWS COMMANDS BY SOURCE
@@ -1367,8 +1699,9 @@ def get_commands_list_text():
         "   🤖 <b>MARKET BOT COMMANDS</b> 📊\n"
         "╚════════════════════════╝\n\n"
         "🧠 <b>AI DEEP RESEARCH SUMMARIES</b>\n"
+        "🔹 <code>/morning</code> (8 PM to 6 AM Overnight AI Pulse)\n"
         "🔹 <code>/summary [hours]</code> (On-Demand AI Research with Read Full View)\n"
-        "🔹 <code>/weekly</code> (7-Day Daily Summaries Master Blueprint)\n\n"
+        "🔹 <code>/weekly</code> (7-Day 14 Pulses Master Blueprint)\n\n"
         "⏱ <b>SINGLE LIST NEWS BY SOURCE</b>\n"
         "🔸 <code>/xnews [hours]</code> (ET NOW X Only)\n"
         "🔸 <code>/normalnews [hours]</code> (Investing / Normal RSS Only)\n"
@@ -1378,7 +1711,8 @@ def get_commands_list_text():
         "🔸 <code>/getred [hour]</code> (Redbox X RSS Detail Flash)\n"
         "──────────────────────\n"
         "⏰ <b>AUTOMATIC SCHEDULES</b>\n"
-        "📌 <code>Daily 08:00 PM</code> (Auto Day Pulse & DB Save)\n"
+        "📌 <code>Daily 06:00 AM</code> (Auto Morning Pulse & DB Save)\n"
+        "📌 <code>Daily 08:00 PM</code> (Auto Evening Pulse & DB Save)\n"
         "📌 <code>Every 10 Mins</code> (Global Market Live Table)\n"
         "──────────────────────\n"
         "📌 <i>చంటి గారు, కమాండ్ కాపీ చేయడానికి Tap చేయండి!</i>"
@@ -1395,7 +1729,8 @@ def list_commands(message):
 scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
 
 scheduler.add_job(send_market_table, 'interval', minutes=10)
-scheduler.add_job(send_daily_evening_pulse_report, 'cron', hour=20, minute=15)
+scheduler.add_job(send_daily_morning_pulse_report, 'cron', hour=15, minute=0)
+scheduler.add_job(send_daily_evening_pulse_report, 'cron', hour=16, minute=0)
 scheduler.start()
 
 app = Flask('')
