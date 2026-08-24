@@ -1629,6 +1629,31 @@ def master_ai_summary_by_hours(message):
     process_ai_summary(hours=hour, pulse_title=f"CUSTOM MARKET SUMMARY (Past {hour} Hours)", pulse_type="CUSTOM SUMMARY", chat_id=message.chat.id)
 
 # ==========================================================
+# 💬 TELEGRAM MESSAGE SENDING HANDLERS (FULL SAFE CLEANER)
+# ==========================================================
+def safe_send_news(chat_id, text, parse_mode="HTML"):
+    """టెలిగ్రామ్ ఎర్రర్స్ రాకుండా టెక్స్ట్‌ని పూర్తిగా క్లీన్ చేసి పంపే ఫంక్షన్"""
+    try:
+        # డాలర్ సింబల్స్ లేదా అన్‌సేఫ్ ట్యాగ్స్ వల్ల ఎర్రర్ రాకుండా టెక్స్ట్ ని క్లీన్ చేయడం
+        cleaned_text = str(text).replace("$", "&#36;")
+        
+        for i in range(2):
+            try:
+                bot.send_message(chat_id, cleaned_text, parse_mode=parse_mode, disable_web_page_preview=True)
+                break
+            except Exception as e:
+                # ఒకవేళ ఇప్పటికీ HTML పార్సింగ్ ఫెయిల్ అయితే, HTML లేకుండా ప్లెయిన్ టెక్స్ట్‌గా పంపిస్తుంది
+                if "can't parse entities" in str(e) or "Bad Request" in str(e):
+                    plain_text = clean_html_tags(text)
+                    bot.send_message(chat_id, plain_text, disable_web_page_preview=True)
+                    break
+                else:
+                    log(f"Retry {i+1} in safe_send_news: {e}", "WARNING")
+                    time.sleep(2)
+    except Exception as outer_err:
+        log(f"❌ safe_send_news critical error: {outer_err}", "ERROR")
+
+# ==========================================================
 # ⏱️ SINGLE-LIST NEWS COMMANDS BY SOURCE
 # ==========================================================
 @bot.message_handler(commands=['xnews'])
@@ -1679,16 +1704,31 @@ def fetch_filtered_news_list(message, source_type, hour, title_label):
         f"📊 <b>మొత్తం వార్తలు:</b> {total_count}\n"
         f"──────────────────────\n\n"
     )
+    
+    bot.send_message(message.chat.id, header, parse_mode='HTML')
 
-    list_lines = []
     for i, n in enumerate(filtered, 1):
         arrival_time = n['time'].astimezone(IST).strftime('%I:%M %p')
-        title = n.get('title', '')
-        line = f"<b>{i}. [{arrival_time}]:</b> {safe_html_text(title)}\n"
-        list_lines.append(line)
+        
+        title = safe_html_text(n.get('title', ''))
+        desc = safe_html_text(n.get('desc', 'సమ్మరీ అందుబాటులో లేదు.'))
 
-    full_text = header + "\n".join(list_lines)
-    send_long_message(message.chat.id, full_text, parse_mode='HTML')
+        if source_type == "NORMAL":
+            msg_block = (
+                f"🔢 <b>[#{i}/{total_count}]</b>  ⏰ <b>[{arrival_time}]</b>\n"
+                f"📌 <b>{title}</b>\n\n"
+                f"🇮🇳 <b>సమ్మరీ:</b>\n{desc}\n"
+                f"──────────────────────"
+            )
+        else:
+            msg_block = (
+                f"🔢 <b>[#{i}/{total_count}]</b>  ⏰ <b>[{arrival_time}]</b>\n"
+                f"🐦 <b>{title}</b>\n"
+                f"──────────────────────"
+            )
+            
+        safe_send_news(message.chat.id, msg_block, parse_mode='HTML')
+        time.sleep(0.4)
 
 # ==========================================================
 # 🤖 COMMANDS LIST HANDLER
