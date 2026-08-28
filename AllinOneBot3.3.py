@@ -39,8 +39,9 @@ def log(msg, level="INFO"):
 # ==========================================================
 # ⚙️ CONFIGURATION & BOT INTERFACE
 # ==========================================================
-TOKEN = "8024122424:AAFVbkMKA7DmW20Tjl4RrolWJFh3lHJLnLY"
-CHAT_ID = "5334000073"
+TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+
 
 
 
