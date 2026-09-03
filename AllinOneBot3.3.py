@@ -1110,7 +1110,8 @@ STRUCTURE:
 3. 🇮🇳 National Business, Policy & Macro Impact
 4. 🌍 Global Markets & Geopolitical Trends
 5. 💰 Institutional / Smart Money View & Scenarios
-6. 🎯 Final CIO Actionable Verdict
+6. 🎯 **Final CIO Actionable Verdict & Strategic Roadmap**
+(మా చీఫ్ ఇన్వెస్ట్‌మెంట్ ఆఫీసర్ (CIO) దృక్పథం ప్రకారం మార్కెట్ ప్రస్తుత స్థితిపై ఇచ్చే కఠినమైన, స్పష్టమైన తుది తీర్పు. గ్లోబల్ మరియు నేషనల్ మాక్రో పరిస్థితులు, సెక్టార్ రొటేషన్, కార్పొరేట్ ఫండమెంటల్స్ మరియు స్మార్ట్ మనీ ట్రెండ్స్‌ను పూర్తిగా మిళితం చేస్తూ... ఇన్వెస్టర్లు స్వల్పకాలిక (Short-term) అస్థిరతలను ఎలా తట్టుకోవాలి? దీర్ఘకాలికంగా ఏ రంగాలకు  ఓవర్‌వెయిట్ ఇవ్వాలి? రిస్క్ మేనేజ్‌మెంట్ మరియు క్యాపిటల్ అలొకేషన్ ఎలా చేయాలి అనే దానిపై అత్యంత శక్తివంతమైన, లోతైన ప్రొఫెషనల్ సలహాను ఇక్కడ స్పష్టంగా ఇవ్వండి.)
 """
     
     final_master_summary = safe_gemini(master_research_prompt)
