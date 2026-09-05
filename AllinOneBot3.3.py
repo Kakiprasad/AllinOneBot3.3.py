@@ -1034,88 +1034,68 @@ def process_ai_summary(hours, pulse_title, pulse_type, chat_id=None):
         and n.get('type') == "NORMAL"
     ]
     total_news_count = len(normal_news)
-    
     target_chat = chat_id or CHAT_ID
     
-    if not normal_news:
-        no_news_msg = f"⚡ 🎯 <b>{pulse_title}</b> ⚡\n📌 అప్‌డేట్: గత {hours} గంటల్లో విశ్లేషణకు తగిన వార్తలు ఏవీ నమోదు కాలేదు సార్."
-        bot.send_message(target_chat, no_news_msg, parse_mode='HTML')
-        return
+    # 1. మన దగ్గర ఉన్న డేటాను బ్రీఫ్‌గా తీసుకుంటాం
+    base_news_text = "\n".join([f"- {n['title']}" for n in normal_news[:30]]) if normal_news else "Specific local RSS news is limited for this window."
 
-    batch_size = 20
-    aggregated_analysis_chunks = []
-
-    for idx in range(0, total_news_count, batch_size):
-        batch = normal_news[idx : idx + batch_size]
-        batch_text = "\n".join([f"- {n['title']}" for n in batch])
-        
-        chunk_prompt = f"""
-        You are acting as the Head of an Elite International Research Team. Review this batch of market live updates:
-        {batch_text}
-        
-        Extract and summarize all critical technical insights, corporate declarations, national developments, and macro global changes. 
-        Keep the layout compact and concise for synthesis.
-        """
-        
-        chunk_analysis = safe_gemini(chunk_prompt)
-        if chunk_analysis and "AI అందుబాటులో లేదు" not in chunk_analysis:
-            aggregated_analysis_chunks.append(chunk_analysis)
-        time.sleep(3)
-
-    combined_raw_analysis = "\n\n".join(aggregated_analysis_chunks)
-    
-    # 👇 పాత ప్రాంప్ట్ తీసేసి, మన కొత్త శక్తివంతమైన ఇన్‌స్టిట్యూషనల్ ప్రాంప్ట్ ఇక్కడ పెడుతున్నాం సార్!
+    # 2. AI ఇంటర్నెట్‌లో నేరుగా సెర్చ్ చేసి రియల్-టైమ్ పరిస్థితులు తెలుసుకునేలా డిజైన్ చేసిన మాస్టర్ ప్రాంప్ట్
     master_research_prompt = f"""
 ROLE:
-మీరు భారతీయ Stock Market మరియు Global Financial Markets పై 30+ సంవత్సరాల అనుభవం ఉన్న
-Senior Institutional Research Analyst, Chief Investment Strategist, Macro Economist,
-Sector Specialist మరియు Professional Fund Manager.
+మీరు భారతీయ Stock Market మరియు Global Financial Markets పై 30+ సంవత్సరాల అనుభవం ఉన్న 
+Senior Institutional Research Analyst, Chief Investment Strategist మరియు Macro Fund Manager.
 
-గత {hours} గంటలుగా ({pulse_title}) సేకరించిన ఈ క్రింది మార్కెట్ వార్తల సమూహాన్ని పూర్తిగా విశ్లేషించి, ఒక లోతైన ప్రొఫెషనల్ ఇన్‌స్టిట్యూషనల్ నివేదికను సిద్ధం చేయండి.
+TASK:
+గత {hours} గంటలుగా మార్కెట్లో జరుగుతున్న పరిణామాలు మరియు ప్రస్తుత గ్లోబల్/నేషనల్ ఆర్థిక పరిస్థితులపై ఒక లోతైన, రియల్-టైమ్ ఇన్‌స్టిట్యూషనల్ నివేదికను సిద్ధం చేయండి.
 
-DATASET TO ANALYZE:
-{combined_raw_analysis}
+CRITICAL INSTRUCTIONS FOR LIVE WEB SEARCH & ACCURACY:
+1. USE LIVE SEARCH: కేవలం కింద ఇచ్చిన లిమిటెడ్ డేటాకే పరిమితం కాకండి. వెంటనే గూగుల్ సెర్చ్ ఉపయోగించి ఇ现在的 (ప్రస్తుత) మార్కెట్ పరిస్థితులు, US Fed నిర్ణయాలు, FII/DII డేటా, క్రూడ్ ఆయిల్ ధరలు మరియు మన వార్తల్లో ఉన్న ప్రధాన కంపెనీల లేటెస్ట్ అప్‌డేట్లను సెర్చ్ చేసి డేటాను సేకరించుకోండి.
+2. NO REPETITION: ఏ ఒక్క పాయింట్‌ను లేదా సెక్టార్‌ను వేర్వేరు హెడ్డింగ్‌లలో మళ్లీ మళ్లీ రిపీట్ చేయవద్దు. ప్రతి సెక్షన్ పూర్తిగా కొత్త అంశాన్ని మాత్రమే చర్చించాలి.
+3. FACT-BASED: సొంతంగా నంబర్లు సృష్టించవద్దు. సెర్చ్‌లో దొరికిన అసలు ఫ్యాక్ట్స్ ఆధారంగానే రాయండి.
 
-==================================================
-1. FACT FIRST — ఊహలు వద్దు
-==================================================
-వార్తలలో నిజంగా ఏయే అంశాలు జరిగాయో వాటిని మాత్రమే ప్రాతిపదికగా తీసుకోండి. మీ సొంతంగా నంబర్లు, పర్సంటేజీలు సృష్టించకండి.
+CONTEXT DATA FROM OUR FEED:
+{base_news_text}
 
-==================================================
-2. CAUSE → TRANSMISSION → IMPACT
-==================================================
-ఈ chain ఆధారంగా విశ్లేషించండి:
-EVENT → ECONOMIC / BUSINESS MECHANISM → SECTOR IMPACT → COMPANY IMPACT → EARNINGS / CASH FLOW / MARGINS / CAPEX IMPACT → STOCK MARKET IMPACT.
+OUTPUT STRUCTURE (Professional Telugu):
+స్టాక్ పేర్లు, సెక్టార్‌లు మరియు ముఖ్యమైన గణాంకాలను **BOLD** చేయండి.
 
-==================================================
-3. STOCK & SECTOR ANALYSIS
-==================================================
-సంబంధిత listed companies (Direct / Indirect beneficiaries) మరియు సెక్టార్లపై (Defense, Renewable Energy, Railways, Banking, Tech మొదలైనవి) డిమాండ్, మార్జిన్లు మరియు ఎర్నింగ్స్ ప్రభావాన్ని స్పష్టంగా వివరించండి.
+1. 🧭 **Executive Summary & Market Sentiment (మార్కెట్ సారాంశం & సెంటిమెంట్)**
+- ప్రస్తుత గ్లోబల్ మరియు ఇండియన్ మార్కెట్ ట్రెండ్ ఏంటి? FII/DIIల బలాబలాలు మరియు ఓవరాల్ మార్కెట్ మూడ్ ఎలా ఉంది? (3-4 పాయింట్లలో).
 
-==================================================
-4. MACRO CONNECTION & SMART MONEY VIEW
-==================================================
-ఈ పరిణామాలను RBI, SEBI, US Fed, FII/DII బిహేవియర్ వంటి గ్లోబల్ & నేషనల్ మాక్రో అంశాలతో కనెక్ట్ చేసి, స్మార్ట్ మనీ (Institutional Investors) దీన్ని ఎలా చూస్తాయో తెలపండి.
+2. 🚀 **Key Sector & Corporate Dynamics (కీలక సెక్టార్లు & కంపెనీలు)**
+- ప్రస్తుతం మార్కెట్‌ను లీడ్ చేస్తున్న సెక్టార్లు (Defense, Renewable, Banking, IT మొదలైనవి) మరియు నిర్దిష్ట కంపెనీల పనితీరుపై ప్రత్యక్ష ప్రభావం.
 
-==================================================
-5. TIME HORIZON & SCENARIOS
-==================================================
-ప్రభావాన్ని Short-term, Medium-term, Long-term కింద విడదీసి, అవసరమైతే Bull / Base / Bear scenarios ఇవ్వండి.
+3. 🇮🇳 **Macro, RBI & Government Policy (మాక్రో & ప్రభుత్వ విధానాలు)**
+- ప్రస్తుత ఆర్థిక పరిస్థితులు, వృద్ధి అంచనాలు, ద్రవ్యోల్బణం మరియు పాలసీ పరమైన కీలక పరిణామాలు.
 
-OUTPUT FORMAT:
-శుభ్రమైన, అత్యున్నత స్థాయి Professional Telugu లో report ఇవ్వండి. స్టాక్ పేర్లు, సెక్టార్‌లు మరియు ముఖ్యమైన గణాంకాలను **BOLD** చేయండి.
-STRUCTURE:
-1. 🧭 Executive Summary & Market Materiality
-2. 🚀 Stock Market & Corporate Analysis (Sector Wise)
-3. 🇮🇳 National Business, Policy & Macro Impact
-4. 🌍 Global Markets & Geopolitical Trends
-5. 💰 Institutional / Smart Money View & Scenarios
-6. 🎯 **Final CIO Actionable Verdict & Strategic Roadmap**
-(మా చీఫ్ ఇన్వెస్ట్‌మెంట్ ఆఫీసర్ (CIO) దృక్పథం ప్రకారం మార్కెట్ ప్రస్తుత స్థితిపై ఇచ్చే కఠినమైన, స్పష్టమైన తుది తీర్పు. గ్లోబల్ మరియు నేషనల్ మాక్రో పరిస్థితులు, సెక్టార్ రొటేషన్, కార్పొరేట్ ఫండమెంటల్స్ మరియు స్మార్ట్ మనీ ట్రెండ్స్‌ను పూర్తిగా మిళితం చేస్తూ... ఇన్వెస్టర్లు స్వల్పకాలిక (Short-term) అస్థిరతలను ఎలా తట్టుకోవాలి? దీర్ఘకాలికంగా ఏ రంగాలకు  ఓవర్‌వెయిట్ ఇవ్వాలి? రిస్క్ మేనేజ్‌మెంట్ మరియు క్యాపిటల్ అలొకేషన్ ఎలా చేయాలి అనే దానిపై అత్యంత శక్తివంతమైన, లోతైన ప్రొఫెషనల్ సలహాను ఇక్కడ స్పష్టంగా ఇవ్వండి.)
+4. 🌍 **Global Macro & Commodities (గ్లోబల్ మార్కెట్లు & కమోడిటీస్)**
+- US మార్కెట్లు, బాండ్ ఈల్డ్స్, డాలర్ ఇండెక్స్ మరియు క్రూడ్ ఆయిల్ కదలికలు మన మార్కెట్‌పై చూపించే ఇంపాక్ట్.
+
+5. 🎯 **CIO Actionable Verdict & Strategy (చీఫ్ ఇన్వెస్ట్‌మెంట్ ఆఫీసర్ తుది తీర్పు)**
+- ఇంటర్నెట్ ద్వారా సేకరించిన ప్రస్తుత మార్కెట్ పరిస్థితిని మరియు గ్లోబల్ ట్రెండ్స్‌ను దృష్టిలో పెట్టుకుని... ఇన్వెస్టర్లు ప్రస్తుతం ఎలాంటి రోడ్‌మ్యాప్ ఫాలో అవ్వాలి? స్వల్పకాలిక రిస్క్‌లను ఎలా మేనేజ్ చేయాలి? ఏ రంగాలపై దీర్ఘకాలికంగా ఫోకస్ పెట్టాలి అనే దానిపై అత్యంత శక్తివంతమైన తుది సలహా.
 """
-    
-    final_master_summary = safe_gemini(master_research_prompt)
-    
+
+    active_client = client_2 or client_1
+    final_master_summary = None
+
+    if active_client:
+        for retry in range(3):
+            try:
+                # 👇 ఇక్కడ గూగుల్ లైవ్ సెర్చ్ టూల్ ఎనేబుల్ చేయబడింది సార్!
+                response = active_client.models.generate_content(
+                    model=MODEL_NAME, 
+                    contents=master_research_prompt,
+                    config={"tools": [{"google_search": {}}]}
+                )
+                final_master_summary = response.text.strip()
+                if final_master_summary: break
+            except Exception as e:
+                log(f"⚠️ Live AI Summary Retry {retry+1} error: {e}", "WARNING")
+                time.sleep(2)
+
+    if not final_master_summary:
+        final_master_summary = "AI అందుబాటులో లేదు సార్."
+
     try:
         daily_summaries_col.insert_one({
             "date": datetime.now(IST),
@@ -1138,15 +1118,15 @@ STRUCTURE:
 
     short_telegram_msg = (
         f"💥 <b>{pulse_title}</b> 💥\n"
-        f"🏢 నివేదిక: గత {hours} గంటల మార్కెట్ సమాచార సమగ్ర విశ్లేషణ\n"
-        f"📊 మొత్తం స్కాన్ చేసిన వార్తలు: {total_news_count}\n"
+        f"🏢 నివేదిక: ఇంటర్నెట్ లైవ్ డేటా & మాక్రో విశ్లేషణ ఆధారంగా రూపొందించబడింది\n"
+        f"📊 మన డేటాబేస్ వార్తలు: {total_news_count}\n"
         f"──────────────────────\n"
         f"💡 సమగ్ర నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
     )
 
     analysis_vault[view_id] = {
         "title": f"{pulse_type} ({total_news_count} News Items)",
-        "source": "Global Research Desk",
+        "source": "Global Research Desk (Live Search)",
         "parts": report_parts,
         "original_text": short_telegram_msg,
         "back_key": back_id
