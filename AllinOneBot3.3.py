@@ -1062,18 +1062,21 @@ OUTPUT STRUCTURE (Professional Telugu):
 1. 🧭 **Executive Summary & Market Sentiment (మార్కెట్ సారాంశం & సెంటిమెంట్)**
 - ప్రస్తుత గ్లోబల్ మరియు ఇండియన్ మార్కెట్ ట్రెండ్ ఏంటి? FII/DIIల బలాబలాలు మరియు ఓవరాల్ మార్కెట్ మూడ్ ఎలా ఉంది? (3-4 పాయింట్లలో).
 
-2. 🚀 **Key Sector & Corporate Dynamics (కీలక సెక్టార్లు & కంపెనీలు)**
-- ప్రస్తుతం మార్కెట్‌ను లీడ్ చేస్తున్న సెక్టార్లు (Defense, Renewable, Banking, IT మొదలైనవి) మరియు నిర్దిష్ట కంపెనీల పనితీరుపై ప్రత్యక్ష ప్రభావం.
-
-3. 🇮🇳 **Macro, RBI & Government Policy (మాక్రో & ప్రభుత్వ విధానాలు)**
-- ప్రస్తుత ఆర్థిక పరిస్థితులు, వృద్ధి అంచనాలు, ద్రవ్యోల్బణం మరియు పాలసీ పరమైన కీలక పరిణామాలు.
-
-4. 🌍 **Global Macro & Commodities (గ్లోబల్ మార్కెట్లు & కమోడిటీస్)**
-- US మార్కెట్లు, బాండ్ ఈల్డ్స్, డాలర్ ఇండెక్స్ మరియు క్రూడ్ ఆయిల్ కదలికలు మన మార్కెట్‌పై చూపించే ఇంపాక్ట్.
-
-5. 🎯 **CIO Actionable Verdict & Strategy (చీఫ్ ఇన్వెస్ట్‌మెంట్ ఆఫీసర్ తుది తీర్పు)**
-- ఇంటర్నెట్ ద్వారా సేకరించిన ప్రస్తుత మార్కెట్ పరిస్థితిని మరియు గ్లోబల్ ట్రెండ్స్‌ను దృష్టిలో పెట్టుకుని... ఇన్వెస్టర్లు ప్రస్తుతం ఎలాంటి రోడ్‌మ్యాప్ ఫాలో అవ్వాలి? స్వల్పకాలిక రిస్క్‌లను ఎలా మేనేజ్ చేయాలి? ఏ రంగాలపై దీర్ఘకాలికంగా ఫోకస్ పెట్టాలి అనే దానిపై అత్యంత శక్తివంతమైన తుది సలహా.
-"""
+1. 🚀 Stock Market & Corporate Analysis
+           - Provide benchmark index trajectory, market sentiment, and sector-wise news (Defense, Solar/Renewable, Railways, Banking, Tech, etc.).
+           - Clearly highlight specific stock names involved (e.g., HAL, BEL, IREDA, HDFC Bank, etc.) with actionable insights.
+        
+        2. 🇮🇳 National Business & Policy News
+           - Detail key domestic macroeconomic developments, RBI/Government policy decisions, GST/Tax updates, and national economic indicators.
+        
+        3. 🌍 International Market & Global Trends
+           - Outline critical international developments, US Fed decisions, inflation data, crude oil trends, foreign markets (US, Asia, Europe), and geopolitical factors.
+        
+        Formatting & Tone Instructions:
+        - Language: Professional, high-impact Telugu script.
+        - Style: Give clear, actionable market insights and highlight important stock names prominently in bold.
+        - Spacing: Use clean paragraph spacing and bullet points for effortless reading.
+    """
 
     active_client = client_2 or client_1
     final_master_summary = None
