@@ -1062,20 +1062,12 @@ OUTPUT STRUCTURE (Professional Telugu):
 1. 🧭 **Executive Summary & Market Sentiment (మార్కెట్ సారాంశం & సెంటిమెంట్)**
 - ప్రస్తుత గ్లోబల్ మరియు ఇండియన్ మార్కెట్ ట్రెండ్ ఏంటి? FII/DIIల బలాబలాలు మరియు ఓవరాల్ మార్కెట్ మూడ్ ఎలా ఉంది? (3-4 పాయింట్లలో).
 
-1. 🚀 Stock Market & Corporate Analysis
-           - Provide benchmark index trajectory, market sentiment, and sector-wise news (Defense, Solar/Renewable, Railways, Banking, Tech, etc.).
-           - Clearly highlight specific stock names involved (e.g., HAL, BEL, IREDA, HDFC Bank, etc.) with actionable insights.
-        
-        2. 🇮🇳 National Business & Policy News
-           - Detail key domestic macroeconomic developments, RBI/Government policy decisions, GST/Tax updates, and national economic indicators.
-        
-        3. 🌍 International Market & Global Trends
-           - Outline critical international developments, US Fed decisions, inflation data, crude oil trends, foreign markets (US, Asia, Europe), and geopolitical factors.
-        
-        Formatting & Tone Instructions:
-        - Language: Professional, high-impact Telugu script.
-        - Style: Give clear, actionable market insights and highlight important stock names prominently in bold.
-        - Spacing: Use clean paragraph spacing and bullet points for effortless reading.
+1. 🚀 Stock Market & Corporate Analysis 
+2. 🇮🇳 National Business & Policy News 
+3. 🌍 International Market & Global Trends 
+
+Provide detailed analysis in Telugu.
+Give clear actionable insights and highlight important stocks if any.
     """
 
     active_client = client_2 or client_1
