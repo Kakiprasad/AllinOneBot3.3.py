@@ -1296,9 +1296,9 @@ scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
 scheduler.add_job(send_market_table, 'interval', minutes=10)
 
 # 3 పూటలా AI సమ్మరీలు వచ్చేలా షెడ్యూల్ చేయడం
-scheduler.add_job(send_morning_pulse_report, 'cron', hour=6, minute=0)    # ఉదయం 6 AM
+scheduler.add_job(send_morning_pulse_report, 'cron', hour=8, minute=0)    # ఉదయం 6 AM
 scheduler.add_job(send_afternoon_pulse_report, 'cron', hour=15, minute=0) # మధ్యాహ్నం 3 PM
-scheduler.add_job(send_evening_pulse_report, 'cron', hour=20, minute=0)   # రాత్రి 8 PM
+scheduler.add_job(send_evening_pulse_report, 'cron', hour=20, minute=30)   # రాత్రి 8 PM
 
 scheduler.start()
     
