@@ -1027,54 +1027,100 @@ def process_ai_summary(hours, pulse_title, pulse_type, chat_id=None):
     now = datetime.now(IST)
     cutoff_time = now - timedelta(hours=hours)
     
-    normal_news = [
+    # గడిచిన నిర్దిష్ట సమయ విండోలోని అన్ని తాజా వార్తలను (NORMAL & X) తీసుకోవడం
+    recent_news = [
         n for n in rss_news_store 
         if isinstance(n, dict) 
-        and n.get('time') >= cutoff_time 
-        and n.get('type') == "NORMAL"
+        and n.get('time') >= cutoff_time
     ]
-    total_news_count = len(normal_news)
+    total_news_count = len(recent_news)
     target_chat = chat_id or CHAT_ID
     
-    # 1. మన దగ్గర ఉన్న డేటాను బ్రీఫ్‌గా తీసుకుంటాం
-    base_news_text = "\n".join([f"- {n['title']}" for n in normal_news[:30]]) if normal_news else "Specific local RSS news is limited for this window."
+    current_date_str = now.strftime('%d-%B-%Y (%A)')
+    current_time_str = now.strftime('%I:%M %p')
+    time_window_str = f"{cutoff_time.strftime('%d-%b %I:%M %p')} నుండి {now.strftime('%d-%b-%Y %I:%M %p')} IST వరకు (గత {hours} గంటలు)"
+    
+    # ఫీడ్ నుండి హెడ్‌లైన్స్ లిస్ట్ తయారీ (గరిష్టంగా 45 వార్తలు)
+    base_news_titles = []
+    for n in recent_news[:45]:
+        title = n.get('title', '')
+        src = n.get('source', 'Market News')
+        if title:
+            base_news_titles.append(f"- [{src}] {title}")
+            
+    base_news_text = "\n".join(base_news_titles) if base_news_titles else "ఫీడ్ వార్తలు ప్రస్తుతం తక్కువగా ఉన్నాయి. గూగుల్ లైవ్ సెర్చ్ ద్వారా తాజా మార్కెట్ సమాచారాన్ని సేకరించండి."
 
-   # 2. AI ఇంటర్నెట్‌లో నేరుగా లైవ్ సెర్చ్ చేసి రియల్-టైమ్ మాక్రో & పాలసీ పరిస్థితులు తెలుసుకునేలా డిజైన్ చేసిన మాస్టర్ ప్రాంప్ట్
+    # 2. గూగుల్ లైవ్ సెర్చ్ మరియు కచ్చితమైన సమయ నియంత్రణతో డిజైన్ చేసిన మాస్టర్ ఇన్‌స్టిట్యూషనల్ ప్రాంప్ట్
     master_research_prompt = f"""
-ROLE:
-మీరు భారతీయ Stock Market మరియు Global Financial Markets పై 30+ సంవత్సరాల అనుభవం ఉన్న 
-Senior Institutional Research Analyst, Chief Investment Strategist మరియు Macro Fund Manager.
+ROLE & IDENTITY:
+మీరు భారతీయ స్టాక్ మార్కెట్ మరియు గ్లోబల్ ఫైనాన్షియల్ మార్కెట్లలో 30+ సంవత్సరాల అనుభవం ఉన్న 
+Senior Institutional Research Analyst, Chief Investment Strategist (CIO), మరియు Global Macro Fund Manager.
+మీరు వందల కోట్ల సంస్థాగత నిధులను (Multi-Crore Institutional Funds) నడిపించే ఒక ప్రొఫెషనల్ మార్కెట్ లెజెండ్.
+
+REAL-TIME TEMPORAL CONTEXT (ఖచ్చితమైన సమయ సమాచారం):
+- ప్రస్తుత తేదీ మరియు సమయం (Current Live Timestamp): {current_date_str}, {current_time_str} IST
+- విశ్లేషణ చేయాల్సిన సమయ విండో (Reporting Window): {time_window_str}
+- నివేదిక విభాగం: {pulse_type} ({pulse_title})
 
 TASK:
-గత {hours} గంటలుగా మార్కెట్లో జరుగుతున్న మాక్రో పరిణామాలు, RBI, SEBI, ప్రభుత్వ పాలసీలు, గ్లోబల్ ట్రెండ్స్ మరియు బిగ్ ఇన్వెస్టర్స్/ఇన్‌స్టిట్యూషనల్ వ్యూస్‌పై ఒక లోతైన, రియల్-టైమ్ ఇన్‌స్టిట్యూషనల్ నివేదికను సిద్ధం చేయండి.
+గత {hours} గంటల కాలంలో ({time_window_str}) మార్కెట్లో చోటుచేసుకున్న జాతీయ (భారతీయ) మరియు అంతర్జాతీయ స్థూల ఆర్థిక (Macro) పరిణామాలు, పాలసీలు, నియంత్రణలు, కమోడిటీలు, జియోపొలిటికల్ ట్రిగ్గర్లు మరియు సెక్టార్ ట్రెండ్స్‌పై సమగ్రమైన, అత్యంత లోతైన ఇన్‌స్టిట్యూషనల్ రీసెర్చ్ నివేదికను రూపొందించండి.
 
-CRITICAL RULES FOR LIVE WEB SEARCH & ACCURACY:
-1. USE LIVE SEARCH: కేవలం కింద ఇచ్చిన లిమిటెడ్ డేటాకే పరిమితం కాకండి. వెంటనే గూగుల్ సెర్చ్ ఉపయోగించి ప్రస్తుతం మార్కెట్లో జరుగుతున్న లైవ్ మాక్రో పరిణామాలు, US Fed నిర్ణయాలు, FII/DII డేటా, క్రూడ్ ఆయిల్ ధరలు, బాండ్ ఈల్డ్స్ మరియు RBI/SEBI/Govt లేటెస్ట్ అప్‌డేట్లను సెర్చ్ చేసి డేటాను సేకరించుకోండి.
-2. NO CORPORATE NEWS: ఏ ఒక్క కంపెనీకి సంబంధించిన కార్పొరేట్ వార్తలు (Stock earnings, individual company contracts, quarterly results) ఇందులో అసలు ఉండకూడదు. కేవలం ఎకానమీ, పాలసీలు మరియు బ్రాడ్ మార్కెట్ ట్రెండ్స్ మాత్రమే ఉండాలి.
-3. NO REPETITION: ఏ ఒక్క పాయింట్‌ను వేర్వేరు హెడ్డింగ్‌లలో మళ్లీ మళ్లీ రిపీట్ చేయవద్దు. ప్రతి సెక్షన్ పూర్తిగా కొత్త అంశాన్ని మాత్రమే చర్చించాలి.
-4. FACT-BASED: సొంతంగా నంబర్లు సృష్టించవద్దు. సెర్చ్‌లో దొరికిన అసలు ఫ్యాక్ట్స్ ఆధారంగానే రాయండి.
+CRITICAL RULES (ఖచ్చితంగా పాటించవలసిన కఠిన నిబంధనలు):
+1. LIVE SEARCH & STRICT TIMELINE (పాత వార్తలు అస్సలు వద్దు):
+   - గూగుల్ సెర్చ్ టూల్ ఉపయోగించి ఖచ్చితంగా నేటి తేదీ ({current_date_str}) మరియు ఈ నిర్దిష్ట సమయ విండో ({time_window_str}) లోని సరికొత్త బ్రేకింగ్, లేటెస్ట్ డెవలప్‌మెంట్లను మాత్రమే సేకరించండి.
+   - ఎప్పుడో నెలలు లేదా సంవత్సరాల క్రితం ముగిసిపోయిన పాత వార్తలను (Outdated/Old news, expired RBI guidelines, or old economic data) రిపోర్టులో ఎట్టి పరిస్థితుల్లోనూ చేర్చవద్దు.
+2. NO INDIVIDUAL COMPANY NEWS (కార్పొరేట్ వార్తలు పూర్తిగా నిషిద్ధం):
+   - ఏ ఒక్క నిర్దిష్ట కంపెనీ ఫలితాలు (Quarterly Earnings/Results), ఇండివిడ్యువల్ స్టాక్ డీల్స్, టార్గెట్ ప్రైస్‌లు, బోర్డ్ మీటింగులు వంటి వార్తలను అస్సలు రాయవద్దు. కేవలం బ్రాడ్ ఎకానమీ, పాలసీలు మరియు సెక్టార్ ట్రెండ్స్ మాత్రమే ఉండాలి.
+3. IN-DEPTH EXPERT ANALYSIS (పైపైన చెప్పి వదిలేయవద్దు):
+   - కేవలం 1-2 సాధారణ లైన్లు లేదా సాధారణ బుల్లెట్ పాయింట్లు రాసి వదిలేయవద్దు.
+   - ఒక సీనియర్ CIO తరహాలో ప్రతి అంశాన్ని చాలా లోతుగా విశ్లేషించండి:
+     • అసలు ఏం జరిగింది? (Background / Live Event)
+     • దీని వెనుక ఉన్న ఆర్థిక లేదా గ్లోబల్ కారణం ఏమిటి? (Macro Reason / Root Cause)
+     • ఇది భారతీయ స్టాక్ మార్కెట్ (Nifty 50, Bank Nifty) మరియు సంబంధిత సెక్టార్లపై స్వల్పకాలికంగా, దీర్ఘకాలికంగా ఎలాంటి ప్రభావం చూపుతుంది? (Sectoral & Market Impact)
+4. FACT-BASED & ACCURATE:
+   - మీ సొంత ఊహలతో సంఖ్యలు లేదా వివరాలు సృష్టించవద్దు. అధికారిక డేటా మరియు తాజా సెర్చ్ ఫలితాల ఆధారంగానే రాయండి.
 
-CONTEXT DATA FROM OUR FEED:
+CONTEXT DATA FROM RSS / X FEED:
 {base_news_text}
 
-OUTPUT STRUCTURE (Professional Telugu):
-స్టాక్ ఇండెక్సులు, పాలసీ పేర్లు మరియు ముఖ్యమైన గణాంకాలను **BOLD** చేయండి.
+OUTPUT STRUCTURE (Professional High-Level Telugu):
+స్టాక్ ఇండెక్సులు (**Nifty 50**, **Bank Nifty**), కరెన్సీ, కమోడిటీలు, సెక్టార్లు మరియు పాలసీల పేర్లను **BOLD** చేయండి.
 
-1. 🧭 **Executive Summary & Macro Sentiment (మార్కెట్ సారాంశం & సెంటిమెంట్)**
-- ప్రస్తుత గ్లోబల్ మరియు ఇండియన్ మాక్రో ట్రెండ్ ఏంటి? FII/DIIల బలాబలాలు మరియు ఓవరాల్ మార్కెట్ మూడ్ ఎలా ఉంది?
+1. 🧭 **Executive Macro Sentiment & Market Direction (మార్కెట్ సారాంశం & గ్లోబల్ సెంటిమెంట్)**
+   - ప్రస్తుత గ్లోబల్ మరియు ఇండియన్ మార్కెట్లను నడిపిస్తున్న ప్రధాన స్థూల ఆర్థిక అంశాలు ఏమిటి?
+   - మార్కెట్ మూడ్ ఎలా ఉంది (Risk-on or Risk-off)? విదేశీ సంస్థాగత పెట్టుబడిదారులు (FIIs) మరియు స్వదేశీ సంస్థలు (DIIs) సెంటిమెంట్, ఓవరాల్ మార్కెట్ డైరెక్షన్ విశ్లేషణ.
 
-2. 🏛️ **RBI, SEBI & Government Policy Updates (పాలసీ & రెగ్యులేటరీ నిర్ణయాలు)**
-- కేంద్ర ప్రభుత్వం, ఆర్బీఐ లేదా సెబీ నుండి వచ్చిన కీలక నిర్ణయాలు, వడ్డీ రేట్లు, బడ్జెట్ లేదా ట్యాక్స్ మార్పులు.
+2. 🏛️ **RBI, Banking & Monetary Regulations (ఆర్బీఐ పాలసీలు & బ్యాంకింగ్ నియమాలు)**
+   - భారతీయ రిజర్వ్ బ్యాంక్ (RBI) నుండి వచ్చిన తాజా మార్గదర్శకాలు, MPC ద్రవ్య విధాన నిర్ణయాలు, రెపో రేటు సంకేతాలు, బ్యాంకింగ్ లిక్విడిటీ లేదా క్రెడిట్ నిబంధనలు.
+   - బ్యాంకింగ్ (Private & PSU Banks) మరియు NBFC రంగాలు, లోన్ గ్రోత్ మరియు మార్కెట్ లిక్విడిటీపై దీని ప్రభావం.
 
-3. 🌍 **Global Markets & Geopolitical Triggers (గ్లోబల్ & జియోపొలిటికల్ సిగ్నల్స్)**
-- క్రూడ్ ఆయిల్ ధరలు, డాలర్ ఇండెక్స్, బాండ్ ఈల్డ్స్, యూఎస్ ఫెడ్ నిర్ణయాలు మరియు అంతర్జాతీయ పరిణామాలు.
+3. ⚖️ **SEBI, Regulatory & Capital Market Directives (సెబీ మార్గదర్శకాలు & మార్కెట్ సంస్కరణలు)**
+   - సెక్యూరిటీస్ అండ్ ఎక్స్ఛేంజ్ బోర్డ్ ఆఫ్ ఇండియా (SEBI) జారీ చేసిన తాజా సర్క్యులర్లు, ఎఫ్&వో (F&O) డెరివేటివ్ నిబంధనలు, మార్జిన్ రూల్స్, రీసెర్చ్ అనలిస్ట్ నిబంధనలు లేదా మార్కెట్ సర్వైలెన్స్ చర్యలు.
+   - రిటైల్ మరియు సంస్థాగత ట్రేడర్లు, బ్రోకరేజీలు మరియు క్యాపిటల్ మార్కెట్లపై దీని పర్యవసానాలు.
 
-4. 📈 **Institutional Insights & Research (రీసెర్చ్ & బిగ్ ఇన్వెస్టర్ సెంటిమెంట్)**
-- పెద్ద ఇన్వెస్టర్లు, విదేశీ సంస్థలు (FIIs/DIIs) మరియు ప్రముఖ రీసెర్చ్ హౌస్‌లు మార్కెట్‌ను ఎలా అంచనా వేస్తున్నాయి.
+4. 🇮🇳 **Central Govt Policies, Macro Economy & Reforms (కేంద్ర ప్రభుత్వ విధానాలు & ఎకానమీ)**
+   - కేంద్ర ప్రభుత్వం లేదా కేబినెట్ తీసుకున్న కీలక విధాన నిర్ణయాలు, యూనియన్ బడ్జెట్ అప్‌డేట్లు, పన్ను విధానాలు, జీఎస్టీ (GST) మార్పులు, ఎగుమతి/దిగుమతి సుంకాలు (Customs/Tariffs), PLI పథకాలు మరియు మౌలిక సదుపాయాల (Infrastructure) ప్రాజెక్టులు.
+   - భారతదేశ GDP వృద్ధి రేటు, CPI/WPI ద్రవ్యోల్బణం, ఇండస్ట్రియల్ ప్రొడక్షన్ (IIP) డేటా సమగ్ర సమీక్ష.
 
-5. 🎯 **Final CIO Macro Takeaway (ఫైనల్ CIO వెర్డిక్ట్)**
-- ఈ మాక్రో మరియు పాలసీ మార్పుల వల్ల ఇండియన్ మార్కెట్ (**Nifty / Bank Nifty**) పై పడే ప్రభావం ఏమిటి?
-    """
+5. 🌍 **Global Macro, Trump Policies, FTAs & Geopolitics (అంతర్జాతీయ పరిణామాలు, ట్రంప్ & వాణిజ్య ఒప్పందాలు)**
+   - యుఎస్ ఫెడరల్ రిజర్వ్ (US Fed FOMC) వడ్డీ రేట్ల అంచనాలు, యుఎస్ 10-ఇయర్ బాండ్ ఈల్డ్స్, డాలర్ ఇండెక్స్ (**DXY**) కదలికలు.
+   - డొనాల్డ్ ట్రంప్ వాణిజ్య విధానాలు, సుంకాలు (Tariffs), లేదా కార్యనిర్వాహక ఉత్తర్వులు (Executive Orders) తెస్తున్న మార్పులు.
+   - భారతదేశం మరియు ఇతర ప్రధాన దేశాల మధ్య జరుగుతున్న ఉచిత వాణిజ్య ఒప్పందాలు (Free Trade Agreements - FTAs).
+   - అంతర్జాతీయ జియోపొలిటికల్ ఉద్రిక్తతలు (మిడిల్ ఈస్ట్, రష్యా-ఉక్రెయిన్ తదితర యుద్ధాలు), అంతర్జాతీయ వాణిజ్య మార్గాలు (Red Sea / Shipping routes) మరియు సప్లై చైన్ సమస్యలు.
+
+6. 🛢️ **Commodities & Energy Radar (ముడి చమురు, బంగారం, వెండి & మెటల్స్)**
+   - బ్రెంట్ మరియు డబ్ల్యూటీఐ క్రూడ్ ఆయిల్ (**Crude Oil**) ధరల హెచ్చుతగ్గులు, ఒపెక్ ప్లస్ (OPEC+) ఉత్పత్తి నిర్ణయాలు; భారత కరెంట్ ఖాతా లోటు (CAD), రూపాయి మారకం విలువ మరియు ఆయిల్ మార్కెటింగ్ కంపెనీల (OMCs) పై ప్రభావం.
+   - బంగారం (**Gold**) మరియు వెండి (**Silver**) ధరల ట్రెండ్స్, పెట్టుబడిదారుల సేఫ్-హెవెన్ డిమాండ్.
+   - పారిశ్రామిక లోహాలు (Copper, Steel, Aluminium) డిమాండ్ మరియు మెటల్స్ సెక్టార్‌పై ప్రభావం.
+
+7. 🔄 **Sector Rotation & Institutional Trends (సెక్టార్ ట్రెండ్స్ & స్మార్ట్ మనీ రొటేషన్)**
+   - ప్రస్తుతం ఏయే రంగాలు (Banking, IT, Auto, Pharma, Metals, Defense, Renewable Energy, Realty, FMCG, etc.) ప్రభుత్వ పాలసీలు లేదా గ్లోబల్ పరిస్థితుల వల్ల లాభపడుతున్నాయి? ఏ రంగాలు ఒత్తిడి ఎదుర్కొంటున్నాయి?
+   - పెద్ద సంస్థలు మరియు స్మార్ట్ మనీ (Smart Money) ఏ సెక్టార్ల నుండి ఏ సెక్టార్లకు రొటేట్ అవుతున్నాయి?
+
+8. 🎯 **Strategic Institutional Verdict for Nifty & Bank Nifty (మార్కెట్ ఎక్స్‌పర్ట్ ముగింపు)**
+   - ఈ స్థూల ఆర్థిక సంకేతాల ఆధారంగా రాబోయే సెషన్లలో **Nifty 50** మరియు **Bank Nifty** కీలక స్థాయిలు మరియు మార్కెట్ ట్రెండ్ ఎలా ఉండవచ్చు?
+   - సాధారణ ఇన్వెస్టర్లు మరియు సంస్థాగత ఇన్వెస్టర్లు అనుసరించాల్సిన వ్యూహాత్మక మార్గదర్శకం (Actionable Strategic Advice).
+"""
 
     active_client = client_2 or client_1
     final_master_summary = None
@@ -1082,7 +1128,7 @@ OUTPUT STRUCTURE (Professional Telugu):
     if active_client:
         for retry in range(3):
             try:
-                # 👇 ఇక్కడ గూగుల్ లైవ్ సెర్చ్ టూల్ ఎనేబుల్ చేయబడింది సార్!
+                # 👇 ఇక్కడ గూగుల్ లైవ్ సెర్చ్ టూల్ ఎనేబుల్ చేయబడింది!
                 response = active_client.models.generate_content(
                     model=MODEL_NAME, 
                     contents=master_research_prompt,
@@ -1119,15 +1165,16 @@ OUTPUT STRUCTURE (Professional Telugu):
 
     short_telegram_msg = (
         f"💥 <b>{pulse_title}</b> 💥\n"
-        f"🏢 నివేదిక: ఇంటర్నెట్ లైవ్ డేటా & మాక్రో విశ్లేషణ ఆధారంగా రూపొందించబడింది\n"
-        f"📊 మన డేటాబేస్ వార్తలు: {total_news_count}\n"
+        f"🏢 నివేదిక: లైవ్ డేటా & మాక్రో రీసెర్చ్ డెస్క్ (Real-Time AI Intelligence)\n"
+        f"📊 సేకరించిన వార్తలు: {total_news_count} అంశాలు\n"
+        f"📅 సమయం: {current_date_str} | {current_time_str}\n"
         f"──────────────────────\n"
-        f"💡 సమగ్ర నివేదిక చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
+        f"💡 సమగ్ర ఇన్‌స్టిట్యూషనల్ నివేదికను చదవడానికి కింద ఉన్న బటన్‌ను నొక్కండి సార్!"
     )
 
     analysis_vault[view_id] = {
         "title": f"{pulse_type} ({total_news_count} News Items)",
-        "source": "Global Research Desk (Live Search)",
+        "source": "Global Institutional Research Desk",
         "parts": report_parts,
         "original_text": short_telegram_msg,
         "back_key": back_id
@@ -1139,7 +1186,8 @@ OUTPUT STRUCTURE (Professional Telugu):
     markup.add(view_btn)
 
     bot.send_message(target_chat, short_telegram_msg, reply_markup=markup, parse_mode="HTML")
-    
+
+
 # ==========================================================
 # ⏱️ SCHEDULED PULSE FUNCTIONS (3 Times a Day)
 # ==========================================================
