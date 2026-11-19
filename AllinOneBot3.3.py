@@ -1292,18 +1292,21 @@ def fetch_filtered_news_list(message, source_type, hour, title_label):
         arrival_time = n['time'].astimezone(IST).strftime('%I:%M %p')
         title = safe_html_text(n.get('title', ''))
         desc = safe_html_text(n.get('desc', 'సమ్మరీ అందుబాటులో లేదు.'))
+        link = n.get('link', '')
 
         if source_type == "NORMAL":
             msg_block = (
                 f"🔢 <b>[#{i}/{total_count}]</b>  ⏰ <b>[{arrival_time}]</b>\n"
                 f"📌 <b>{title}</b>\n\n"
                 f"🇮🇳 <b>సమ్మరీ:</b>\n{desc}\n"
+                f"🔗 {n.get('link', '')}\n"
                 f"──────────────────────\n\n"
             )
         else:
             msg_block = (
                 f"🔢 <b>[#{i}/{total_count}]</b>  ⏰ <b>[{arrival_time}]</b>\n"
                 f"🐦 <b>{title}</b>\n"
+                f"🔗 {n.get('link', '')}\n"
                 f"──────────────────────\n\n"
             )
         
